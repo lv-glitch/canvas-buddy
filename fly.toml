@@ -9,7 +9,7 @@ primary_region = "sjc"
   # NEXT_PUBLIC_* env vars are inlined into the client bundle at build time.
   # Edit this if the backend URL changes (or override at deploy with --build-arg).
   [build.args]
-    NEXT_PUBLIC_TOOL_API = "https://canvas-buddy-api.fly.dev"
+    NEXT_PUBLIC_TOOL_API = "https://api.canvasbuddy.io"
 
 [env]
   PORT = "3030"
