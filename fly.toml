@@ -1,0 +1,32 @@
+# Fly.io config for the Canvas Buddy frontend (Next.js 16 standalone).
+# Sibling to canvas-buddy-api (the FFmpeg + Flux backend on canvas-buddy-api.fly.dev).
+
+app = "canvas-buddy"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+  # NEXT_PUBLIC_* env vars are inlined into the client bundle at build time.
+  # Edit this if the backend URL changes (or override at deploy with --build-arg).
+  [build.args]
+    NEXT_PUBLIC_TOOL_API = "https://canvas-buddy-api.fly.dev"
+
+[env]
+  PORT = "3030"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 3030
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

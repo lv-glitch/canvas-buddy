@@ -1,0 +1,14 @@
+.next/
+node_modules/
+.git/
+.github/
+.vercel/
+.env*.local
+.env.production
+.env.development
+*.log
+.DS_Store
+README.md
+DEPLOY.md
+.vscode/
+.idea/
