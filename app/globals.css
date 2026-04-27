@@ -1,26 +1,142 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Brand palette */
+  --color-bg: #121212;
+  --color-surface: #1a1a1a;
+  --color-surface-2: #232323;
+  --color-border: #2a2a2a;
+  --color-ink: #ffffff;
+  --color-ink-dim: #b3b3b3;
+  --color-ink-muted: #6a6a6a;
+  --color-accent: #1ED760;
+  --color-accent-hover: #1fdf64;
+  --color-purple: #B388FF;
+  --color-purple-hover: #c4a3ff;
+
+  /* Radii */
+  --radius-card: 12px;
+  --radius-pill: 20px;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Inter, "Helvetica Neue", Arial, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  min-height: 100vh;
 }
+
+/* Subtle ambient glow for the hero section */
+.hero-glow {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(30, 215, 96, 0.10) 0%, rgba(30, 215, 96, 0) 70%),
+    radial-gradient(40% 40% at 80% 30%, rgba(179, 136, 255, 0.08) 0%, rgba(179, 136, 255, 0) 70%);
+}
+
+@keyframes cb-spin { to { transform: rotate(360deg); } }
+
+/* CSS-only approximations of the canvas effects, used by the app's live
+   preview (the real renders are FFmpeg in the backend). Amplitudes are
+   pumped up enough to be obviously animating — the real backend renders
+   ship more subtle motion. */
+@keyframes cb-zoom {
+  0%, 100% { transform: scale(1.04); }
+  50%      { transform: scale(1.18); }
+}
+@keyframes cb-drift {
+  0%   { transform: scale(1.10) translate(-3%, -2%); }
+  25%  { transform: scale(1.10) translate(3%, -2%); }
+  50%  { transform: scale(1.10) translate(3%, 3%); }
+  75%  { transform: scale(1.10) translate(-3%, 3%); }
+  100% { transform: scale(1.10) translate(-3%, -2%); }
+}
+@keyframes cb-pulse {
+  0%, 100% { transform: scale(1.04); filter: brightness(1); }
+  50%      { transform: scale(1.18); filter: brightness(1.12); }
+}
+@keyframes cb-kenburns {
+  0%   { transform: scale(1.02) translate(-2%, -2%); }
+  100% { transform: scale(1.22) translate(2%, 2%); }
+}
+@keyframes cb-tilt {
+  0%, 100% { transform: scale(1.08) rotate(-3deg); }
+  50%      { transform: scale(1.08) rotate(3deg); }
+}
+@keyframes cb-vertigo {
+  0%, 100% { transform: scale(1.05) rotate(-4deg); }
+  50%      { transform: scale(1.18) rotate(4deg); }
+}
+@keyframes cb-glow {
+  0%, 100% { transform: scale(1.04); filter: brightness(0.92) saturate(0.95); }
+  50%      { transform: scale(1.10); filter: brightness(1.18) saturate(1.15); }
+}
+@keyframes cb-rotate {
+  0%   { transform: scale(1.45) rotate(0deg); }
+  100% { transform: scale(1.45) rotate(360deg); }
+}
+
+/* Glitch — analog-TV-coming-in-and-out-of-focus feel. Mostly a stable
+   "tuned in" signal with periodic interference: brief out-of-focus blur,
+   occasional bright signal flash, occasional dim/desaturated dropout, and
+   intermittent hue chatter. Uses linear timing on tightly-spaced keyframes
+   so transitions snap on/off rather than smoothly interpolating. */
+@keyframes cb-glitch-flicker {
+  /* tuned in */
+  0%   { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+  8%   { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+
+  /* brief hue chatter */
+  10%  { filter: saturate(1.5) contrast(1.25) hue-rotate(-14deg); }
+  12%  { filter: saturate(1.5) contrast(1.25) hue-rotate(-14deg); }
+
+  /* out of focus — bright signal flash */
+  14%  { filter: saturate(1.05) contrast(1.5) hue-rotate(0deg) blur(2.5px) brightness(1.25); }
+  18%  { filter: saturate(1.05) contrast(1.5) hue-rotate(0deg) blur(2.5px) brightness(1.25); }
+
+  /* snap back, tuned in */
+  20%  { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+  36%  { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+
+  /* hue jump */
+  38%  { filter: saturate(1.5) contrast(1.28) hue-rotate(20deg); }
+  40%  { filter: saturate(1.5) contrast(1.28) hue-rotate(20deg); }
+
+  /* dropout — dim, soft, desaturated */
+  44%  { filter: saturate(0.65) contrast(0.85) hue-rotate(0deg) blur(3px) brightness(0.82); }
+  50%  { filter: saturate(0.65) contrast(0.85) hue-rotate(0deg) blur(3px) brightness(0.82); }
+
+  /* snap back */
+  52%  { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+  68%  { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+
+  /* sharp negative hue blip */
+  70%  { filter: saturate(1.55) contrast(1.3) hue-rotate(-22deg); }
+  72%  { filter: saturate(1.55) contrast(1.3) hue-rotate(-22deg); }
+
+  /* second out-of-focus moment, briefer */
+  76%  { filter: saturate(1.2) contrast(1.55) hue-rotate(0deg) blur(1.8px) brightness(1.2); }
+  79%  { filter: saturate(1.2) contrast(1.55) hue-rotate(0deg) blur(1.8px) brightness(1.2); }
+
+  /* settle back */
+  82%  { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+  100% { filter: saturate(1.4) contrast(1.2) hue-rotate(0deg); }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-muted); }
