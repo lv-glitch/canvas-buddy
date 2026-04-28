@@ -140,6 +140,54 @@ export default function CanvasBuddyApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-fetch /api/me and the canvas list when the tab regains focus.
+  // The Stripe Customer Portal opens in a new tab, so when the user comes
+  // back here after cancelling/upgrading we want the plan + library state
+  // to refresh without requiring a manual reload.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      Promise.all([fetch("/api/me"), fetch("/api/canvases")])
+        .then(async ([meRes, listRes]) => {
+          if (meRes.ok) {
+            const { user, quota } = await meRes.json();
+            setPlan(user.plan);
+            setVideosUsed(user.videosUsed);
+            setVideosLimit(quota.videosLimit);
+            setAIGenerationsLeft(
+              quota.aiGenerationsRemaining === -1 ? Infinity : quota.aiGenerationsRemaining
+            );
+            setSubscriptionEndsAt(user.subscriptionEndsAt ?? null);
+            setCancelAtPeriodEnd(!!user.cancelAtPeriodEnd);
+          }
+          if (listRes.ok) {
+            const { canvases: rows } = await listRes.json();
+            setCanvases(
+              (rows as Array<{
+                id: string; name: string; animation: string; filter: string;
+                duration: number;
+                videoURL: string | null;
+                thumbnailURL: string | null;
+                paid_one_off_id: string | null;
+              }>).map((r) => ({
+                id: r.id,
+                name: r.name,
+                effect: labelFor(EFFECTS, r.animation),
+                filter: labelFor(FILTERS, r.filter),
+                duration: r.duration,
+                thumbnailURL: r.thumbnailURL || "",
+                videoURL: r.videoURL || "",
+                paidOneOffId: r.paid_one_off_id,
+              }))
+            );
+          }
+        })
+        .catch(() => {});
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
   // Load user info + saved canvases on mount. Replaces the hardcoded quotas
   // and the in-memory canvases array with DB-backed state.
   useEffect(() => {

@@ -55,7 +55,11 @@ export function TopNav({
       const r = await fetch("/api/portal", { method: "POST" });
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data.url) throw new Error(data.error || "Portal failed.");
-      window.location.href = data.url;
+      // Open in a new tab so closing it lands the user back on /app — Stripe
+      // doesn't auto-return after cancellation, and the small in-portal
+      // "Return to Canvas Buddy" link is easy to miss.
+      window.open(data.url, "_blank", "noopener,noreferrer");
+      setBillingBusy(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setBillingErr(msg);
