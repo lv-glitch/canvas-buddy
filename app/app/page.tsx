@@ -388,12 +388,18 @@ export default function CanvasBuddyApp() {
 
   function downloadCurrent() {
     if (!resultURL) return;
-    if (plan === "pro" || plan === "payg") {
-      triggerDownload(resultURL, "canvas.mp4");
+    // Mirror downloadFromList: pick the same library row currently shown
+    // in the preview (if any) so the filename respects renames the user
+    // made in the library, and so paid_one_off_id is honoured.
+    const selected =
+      canvases.find((c) => c.id === selectedCanvasId) ?? canvases[0];
+    const filename = `${selected?.name || "canvas"}.mp4`;
+    if (plan === "pro" || plan === "payg" || selected?.paidOneOffId) {
+      triggerDownload(resultURL, filename);
+    } else if (selected) {
+      setDownloadModalFor(selected);
     } else {
-      // Free: choose between watermarked free vs. $4.99 clean
-      const last = canvases[0];
-      if (last) setDownloadModalFor(last);
+      triggerDownload(resultURL, filename);
     }
   }
 
