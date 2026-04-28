@@ -44,8 +44,10 @@ export async function POST(req: Request) {
   const stripe = getStripe();
   const returnUrl = `${siteOrigin(req)}/app?checkout=cancelled`;
 
-  // For the cancel flow we need the active subscription id, fetched live
-  // from Stripe (we don't store it in our DB).
+  // For the cancel flow we need an active subscription id, fetched live
+  // from Stripe. If the sub is already scheduled to cancel (the user
+  // clicked Cancel earlier), Stripe rejects re-opening the cancel flow —
+  // fall back to the general portal so they can reactivate.
   let flowData = undefined;
   if (flow === "cancel") {
     const subs = await stripe.subscriptions.list({
@@ -53,18 +55,19 @@ export async function POST(req: Request) {
       status: "active",
       limit: 1,
     });
-    const subId = subs.data[0]?.id;
-    if (subId) {
+    const sub = subs.data[0];
+    if (sub && !sub.cancel_at_period_end) {
       flowData = {
         type: "subscription_cancel" as const,
-        subscription_cancel: { subscription: subId },
+        subscription_cancel: { subscription: sub.id },
         after_completion: {
           type: "redirect" as const,
           redirect: { return_url: returnUrl },
         },
       };
     }
-    // No active subscription found → fall through to general portal.
+    // No active sub OR already cancelling → fall through to general portal,
+    // where the user can reactivate, see invoices, update payment method.
   }
 
   const session = await stripe.billingPortal.sessions.create({
