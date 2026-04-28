@@ -335,7 +335,9 @@ export default function CanvasBuddyApp() {
     setAIBusy(true);
     setAIError(null);
     try {
-      const r = await fetch(`${TOOL_API}/api/generate-image`, {
+      // Goes through our /api/generate-image proxy which adds the auth +
+      // backend-token. Direct calls to api.canvasbuddy.io now require it.
+      const r = await fetch(`/api/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: aiPrompt, turnstileToken }),
