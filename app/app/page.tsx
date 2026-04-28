@@ -528,6 +528,14 @@ export default function CanvasBuddyApp() {
           effectLabel={labelFor(EFFECTS, effect)}
           filterLabel={labelFor(FILTERS, filter)}
           renderError={renderError}
+          selectedName={
+            selectedCanvasId
+              ? canvases.find((c) => c.id === selectedCanvasId)?.name ?? null
+              : null
+          }
+          onRenameSelected={(name) => {
+            if (selectedCanvasId) renameCanvas(selectedCanvasId, name);
+          }}
         />
 
         <RightPanel

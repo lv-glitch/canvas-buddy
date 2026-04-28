@@ -15,6 +15,11 @@ interface CenterPanelProps {
   effectLabel: string;
   filterLabel: string;
   renderError: string | null;
+  /** Selected canvas name shown above the preview, editable. Pass null
+   *  when no library row is selected (e.g. mid-generation, fresh state)
+   *  and the title field will be hidden. */
+  selectedName: string | null;
+  onRenameSelected: (name: string) => void;
 }
 
 // CSS approximations of each backend filter, tuned to match the strength of
@@ -69,6 +74,8 @@ export function CenterPanel({
   effectLabel,
   filterLabel,
   renderError,
+  selectedName,
+  onRenameSelected,
 }: CenterPanelProps) {
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(0); // 0..1
@@ -124,6 +131,11 @@ export function CenterPanel({
     <main className="flex-1 bg-[#0e0e0e] overflow-y-auto">
       <div className="min-h-full flex items-center justify-center p-8">
         <div className="w-[280px] flex flex-col gap-4">
+          {/* Title — editable, becomes the download filename */}
+          {selectedName !== null && (
+            <CanvasTitleField name={selectedName} onSave={onRenameSelected} />
+          )}
+
           {/* Preview tile — 9:16 vertical, matches Spotify Canvas spec */}
           <div
             className="relative w-[280px] aspect-[9/16] rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden flex items-center justify-center"
@@ -247,5 +259,42 @@ export function CenterPanel({
         </div>
       </div>
     </main>
+  );
+}
+
+function CanvasTitleField({
+  name,
+  onSave,
+}: {
+  name: string;
+  onSave: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(name);
+  // Keep draft in sync when the parent renames externally (e.g. user
+  // edits the same canvas in the library row).
+  useEffect(() => { setDraft(name); }, [name]);
+
+  function commit() {
+    const next = draft.trim();
+    if (next && next !== name) onSave(next);
+    else setDraft(name);
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          if (e.key === "Escape") { setDraft(name); (e.target as HTMLInputElement).blur(); }
+        }}
+        maxLength={80}
+        className="flex-1 bg-transparent text-sm font-semibold text-[var(--color-ink)] border-b border-transparent hover:border-[var(--color-border)] focus:border-[var(--color-accent)] outline-none transition-colors"
+        title="Click to rename"
+      />
+    </div>
   );
 }
