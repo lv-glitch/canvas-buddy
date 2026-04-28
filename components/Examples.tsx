@@ -1,18 +1,41 @@
-// Spec-faithful Spotify mobile-player mockups. Drop new artwork into
-// public/examples/ and update the array below — no other code changes.
+// Spec-faithful Spotify mobile-player mockups. Edit this array to swap
+// artwork — drop the file in /public/examples/ and reference it here.
+// `media` accepts both .mp4 (looped, autoplaying) and image paths.
 const PHONES: PhoneConfig[] = [
-  { image: "/examples/canvas1.jpg", title: "Song Title 1", artist: "Artist 1", effect: "Zoom + Noir" },
-  { image: "/examples/canvas2.jpg", title: "Song Title 2", artist: "Artist 2", effect: "Drift + Coast" },
-  { image: "/examples/canvas3.jpg", title: "Song Title 3", artist: "Artist 3", effect: "Pulse + Golden Hour" },
-  { image: "/examples/canvas4.jpg", title: "Song Title 4", artist: "Artist 4", effect: "Glitch + VHS" },
+  {
+    media: "/examples/01-Same-Soul--Out-of-Nowhere.mp4",
+    title: "Out of Nowhere",
+    artist: "Same Soul",
+    effect: "Zoom + Noir",
+  },
+  {
+    media: "/examples/02-Sonya--All-Over-Me.mp4",
+    title: "All Over Me",
+    artist: "Sonya",
+    effect: "Drift + Coast",
+  },
+  {
+    media: "/examples/03-stelle-e-luna--Delicate.mp4",
+    title: "Delicate",
+    artist: "stelle e luna",
+    effect: "Pulse + Golden Hour",
+  },
+  {
+    media: "/examples/04-Norah-Brown--Let-It.mp4",
+    title: "Let It",
+    artist: "Norah Brown",
+    effect: "Glitch + VHS",
+  },
 ];
 
 interface PhoneConfig {
-  image: string;
+  media: string;
   title: string;
   artist: string;
   effect: string;
 }
+
+const VIDEO_RE = /\.(mp4|webm|mov)$/i;
 
 export function Examples() {
   return (
@@ -37,7 +60,8 @@ export function Examples() {
   );
 }
 
-function Phone({ image, title, artist, effect }: PhoneConfig) {
+function Phone({ media, title, artist, effect }: PhoneConfig) {
+  const isVideo = VIDEO_RE.test(media);
   return (
     <figure className="flex flex-col items-center gap-3">
       <div
@@ -49,12 +73,23 @@ function Phone({ image, title, artist, effect }: PhoneConfig) {
           border: "2px solid #333",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        {isVideo ? (
+          <video
+            src={media}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={media}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        )}
 
         {/* Readability gradient — dark at the bottom, fades upward */}
         <div
@@ -98,10 +133,7 @@ function Phone({ image, title, artist, effect }: PhoneConfig) {
             className="mt-2 rounded-full overflow-hidden"
             style={{ height: "2px", backgroundColor: "rgba(255,255,255,0.25)" }}
           >
-            <div
-              className="h-full bg-white"
-              style={{ width: "35%" }}
-            />
+            <div className="h-full bg-white" style={{ width: "35%" }} />
           </div>
 
           {/* Transport: skip back / play / skip forward */}
