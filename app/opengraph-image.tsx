@@ -91,9 +91,11 @@ export default function OpengraphImage() {
             flexDirection: "column",
           }}
         >
-          <div>Upload your art.</div>
-          <div>
-            Get a <span style={{ color: ACCENT }}>Canvas video</span> in seconds.
+          <div style={{ display: "flex" }}>Upload your art.</div>
+          <div style={{ display: "flex", flexWrap: "wrap" }}>
+            <span>Get a&nbsp;</span>
+            <span style={{ color: ACCENT }}>Canvas video</span>
+            <span>&nbsp;in seconds.</span>
           </div>
         </div>
 
