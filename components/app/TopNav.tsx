@@ -52,14 +52,18 @@ export function TopNav({
     setBillingBusy(true);
     setBillingErr(null);
     try {
-      const r = await fetch("/api/portal", { method: "POST" });
+      // Use the cancel-flow specifically so Stripe auto-redirects back to
+      // /app after the user confirms. The general portal doesn't support
+      // post-action redirects, leaving users stranded on a Stripe page.
+      const r = await fetch("/api/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ flow: "cancel" }),
+      });
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data.url) throw new Error(data.error || "Portal failed.");
-      // Open in a new tab so closing it lands the user back on /app — Stripe
-      // doesn't auto-return after cancellation, and the small in-portal
-      // "Return to Canvas Buddy" link is easy to miss.
-      window.open(data.url, "_blank", "noopener,noreferrer");
-      setBillingBusy(false);
+      // Same tab — the portal will redirect back to /app on completion.
+      window.location.href = data.url;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setBillingErr(msg);
