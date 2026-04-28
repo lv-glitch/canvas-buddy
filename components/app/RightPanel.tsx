@@ -42,9 +42,15 @@ export function RightPanel({
       <div className="p-5 space-y-6">
         <Section title="My canvas videos">
           {canvases.length === 0 ? (
-            <p className="text-xs text-[var(--color-ink-muted)] py-2">
-              No videos yet. Generate one to start your library.
-            </p>
+            <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/30 px-3 py-4 text-center">
+              <p className="text-xs text-[var(--color-ink)] font-medium">
+                Your library is empty.
+              </p>
+              <p className="text-[11px] text-[var(--color-ink-muted)] mt-1 leading-relaxed">
+                Render your first canvas — it&rsquo;ll appear here and you can
+                rename, redownload, or unlock it later.
+              </p>
+            </div>
           ) : (
             <ul className="space-y-2">
               {canvases.map((c) => {

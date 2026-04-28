@@ -78,6 +78,19 @@ export default function CanvasBuddyApp() {
   const [downloadModalFor, setDownloadModalFor] = useState<SavedCanvas | null>(null);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
+  // First-run quickstart — visible only when the library is empty AND the
+  // user hasn't dismissed it. Persisted in localStorage so it doesn't keep
+  // popping back if they intentionally cleared their library.
+  const [quickstartDismissed, setQuickstartDismissed] = useState<boolean>(true);
+  useEffect(() => {
+    setQuickstartDismissed(
+      typeof window !== "undefined" &&
+      window.localStorage.getItem("cb-quickstart-dismissed") === "1"
+    );
+  }, []);
+  const showQuickstart =
+    !quickstartDismissed && canvases.length === 0 && !isGenerating;
+
   // Banner shown briefly after a Stripe Checkout returns. Covers two
   // distinct flows:
   //   ?checkout=success   → Pro subscription upgrade
@@ -464,6 +477,33 @@ export default function CanvasBuddyApp() {
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)]">
+      {/* Editor isn't built for phones — Spotify Canvas creators are on
+          desktop, so we ship a friendly notice instead of a broken layout.
+          md = 768px, just below where the 3 panels stop fitting. */}
+      <div className="md:hidden flex-1 flex items-center justify-center p-8 text-center">
+        <div className="max-w-sm space-y-4">
+          <div className="w-12 h-12 rounded-full bg-[var(--color-accent)]/15 text-[var(--color-accent)] mx-auto flex items-center justify-center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="14" rx="2"/>
+              <line x1="8" y1="20" x2="16" y2="20"/>
+              <line x1="12" y1="18" x2="12" y2="20"/>
+            </svg>
+          </div>
+          <h1 className="text-lg font-bold tracking-tight">
+            Canvas Buddy works best on a laptop.
+          </h1>
+          <p className="text-sm text-[var(--color-ink-dim)] leading-relaxed">
+            The editor needs a bit more screen than a phone has. Open
+            <span className="text-[var(--color-accent)] font-semibold"> canvasbuddy.io </span>
+            on your computer to render canvases.
+          </p>
+          <p className="text-xs text-[var(--color-ink-muted)] pt-2">
+            (Mobile editing is on the roadmap.)
+          </p>
+        </div>
+      </div>
+
+      <div className="hidden md:flex flex-1 flex-col">
       {checkoutBanner === "checkout-success" && (
         <Banner color="accent" onDismiss={() => setCheckoutBanner(null)}>
           Welcome to Pro — your account is upgraded. Watermark-free, unlimited renders.
@@ -483,6 +523,14 @@ export default function CanvasBuddyApp() {
         <Banner color="muted" onDismiss={() => setCheckoutBanner(null)}>
           Watermark unlock cancelled. No charge.
         </Banner>
+      )}
+      {showQuickstart && (
+        <Quickstart
+          onDismiss={() => {
+            setQuickstartDismissed(true);
+            try { localStorage.setItem("cb-quickstart-dismissed", "1"); } catch {}
+          }}
+        />
       )}
       <TopNav
         videosUsed={videosUsed}
@@ -594,11 +642,49 @@ export default function CanvasBuddyApp() {
           }
         }}
       />
+      </div>
     </div>
   );
 }
 
 /* ---------- helpers ---------- */
+
+function Quickstart({ onDismiss }: { onDismiss: () => void }) {
+  const steps = [
+    { n: "1", title: "Pick a photo", body: "Upload your own art on the left, or describe one with AI." },
+    { n: "2", title: "Pick a vibe", body: "Choose an effect and a color filter. Tweak the duration." },
+    { n: "3", title: "Render & download", body: "Hit Generate Canvas. The MP4 lands in your library, ready for Spotify." },
+  ];
+  return (
+    <div className="bg-[var(--color-surface)]/60 border-b border-[var(--color-border)] px-4 sm:px-6 py-4 flex items-start gap-4">
+      <div className="flex-1 grid sm:grid-cols-3 gap-3 sm:gap-6">
+        {steps.map(({ n, title, body }) => (
+          <div key={n} className="flex items-start gap-3 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-[var(--color-accent)]/15 text-[var(--color-accent)] flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {n}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[var(--color-ink)] tracking-tight">
+                {title}
+              </p>
+              <p className="text-[11px] text-[var(--color-ink-dim)] mt-0.5 leading-relaxed">
+                {body}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] text-xs font-semibold tracking-wider flex-shrink-0"
+      >
+        DISMISS
+      </button>
+    </div>
+  );
+}
 
 function Banner({
   color,

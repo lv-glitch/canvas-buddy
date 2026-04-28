@@ -168,8 +168,12 @@ export function CenterPanel({
                     <polyline points="21 15 16 10 5 21" />
                   </svg>
                 </div>
-                <p className="text-xs text-[var(--color-ink-muted)]">
-                  Drop or generate an image to preview
+                <p className="text-sm font-medium text-[var(--color-ink)]">
+                  Start with a photo
+                </p>
+                <p className="text-xs text-[var(--color-ink-muted)] mt-1 leading-relaxed">
+                  Upload one in the left panel — or click <em>AI</em> and
+                  describe what you want.
                 </p>
               </div>
             )}
