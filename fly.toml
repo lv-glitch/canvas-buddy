@@ -19,7 +19,7 @@ primary_region = "sjc"
     # Cloudflare Turnstile site key — public, baked into the client bundle.
     # Get from https://dash.cloudflare.com → Turnstile → your site → "Site Key".
     # Leave blank in dev; verification fails open on the backend if not set.
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADFCBsmEJY24l2hv"
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADFLxEzHUsroEZRA"
 
 [env]
   PORT = "3030"
