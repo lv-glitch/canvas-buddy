@@ -17,7 +17,16 @@ export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!STRIPE_PRICE_IDS.perCanvas) {
+  // Debug: log what we see for STRIPE_PRICE_PER_CANVAS so we can tell
+  // whether the env var is missing or just being misread.
+  const directRead = process.env.STRIPE_PRICE_PER_CANVAS;
+  const viaGetter = STRIPE_PRICE_IDS.perCanvas;
+  console.log(
+    `[checkout/canvas] env probe: ` +
+    `direct=${JSON.stringify(directRead?.slice(0, 8))}…(len=${directRead?.length || 0}) ` +
+    `getter=${JSON.stringify(viaGetter.slice(0, 8))}…(len=${viaGetter.length})`
+  );
+  if (!viaGetter) {
     return NextResponse.json(
       { error: "Per-canvas price not configured. Set STRIPE_PRICE_PER_CANVAS in env." },
       { status: 500 }
