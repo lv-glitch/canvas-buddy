@@ -1,30 +1,32 @@
 // Spec-faithful Spotify mobile-player mockups. Edit this array to swap
 // artwork — drop the file in /public/examples/ and reference it here.
 // `media` accepts both .mp4 (looped, autoplaying) and image paths.
+// `effect` is the "Effect + Filter" caption shown below each phone — if
+// you don't know the real settings yet, leave it empty and nothing renders.
 const PHONES: PhoneConfig[] = [
   {
     media: "/examples/01-Same-Soul--Out-of-Nowhere.mp4",
     title: "Out of Nowhere",
     artist: "Same Soul",
-    effect: "Zoom + Noir",
+    effect: "",
   },
   {
     media: "/examples/02-Sonya--All-Over-Me.mp4",
     title: "All Over Me",
     artist: "Sonya",
-    effect: "Drift + Coast",
+    effect: "",
   },
   {
     media: "/examples/03-stelle-e-luna--Delicate.mp4",
     title: "Delicate",
     artist: "stelle e luna",
-    effect: "Pulse + Golden Hour",
+    effect: "",
   },
   {
     media: "/examples/04-Norah-Brown--Let-It.mp4",
     title: "Let It",
     artist: "Norah Brown",
-    effect: "Glitch + VHS",
+    effect: "",
   },
 ];
 
@@ -32,7 +34,7 @@ interface PhoneConfig {
   media: string;
   title: string;
   artist: string;
-  effect: string;
+  effect?: string;
 }
 
 const VIDEO_RE = /\.(mp4|webm|mov)$/i;
@@ -158,9 +160,11 @@ function Phone({ media, title, artist, effect }: PhoneConfig) {
         </div>
       </div>
 
-      <figcaption className="text-[10px] uppercase tracking-wider text-[var(--color-ink-muted)] font-medium">
-        {effect}
-      </figcaption>
+      {effect ? (
+        <figcaption className="text-[10px] uppercase tracking-wider text-[var(--color-ink-muted)] font-medium">
+          {effect}
+        </figcaption>
+      ) : null}
     </figure>
   );
 }
