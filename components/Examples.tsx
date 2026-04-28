@@ -69,9 +69,9 @@ function Phone({ media, title, artist, effect }: PhoneConfig) {
       <div
         className="relative bg-black overflow-hidden"
         style={{
-          width: "128px",
-          height: "254px",
-          borderRadius: "18px",
+          width: "200px",
+          height: "397px",
+          borderRadius: "26px",
           border: "2px solid #333",
         }}
       >
@@ -104,14 +104,14 @@ function Phone({ media, title, artist, effect }: PhoneConfig) {
         />
 
         {/* Top bar — down arrow / PLAYING FROM PLAYLIST / hamburger */}
-        <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2.5 pt-2.5 text-white/85">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div className="absolute top-0 inset-x-0 flex items-center justify-between px-3.5 pt-3.5 text-white/85">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>
-          <span className="text-[6px] font-semibold tracking-[0.12em] uppercase">
+          <span className="text-[9px] font-semibold tracking-[0.14em] uppercase">
             Playing from playlist
           </span>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="4" y1="7" x2="20" y2="7" />
             <line x1="4" y1="12" x2="20" y2="12" />
             <line x1="4" y1="17" x2="20" y2="17" />
@@ -119,40 +119,40 @@ function Phone({ media, title, artist, effect }: PhoneConfig) {
         </div>
 
         {/* Bottom: title + artist + scrub + transport */}
-        <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 text-white">
-          <p className="font-bold leading-tight" style={{ fontSize: "10px" }}>
+        <div className="absolute inset-x-0 bottom-0 px-3.5 pb-3.5 text-white">
+          <p className="font-bold leading-tight" style={{ fontSize: "15px" }}>
             {title}
           </p>
           <p
-            className="leading-tight mt-0.5"
-            style={{ fontSize: "8px", color: "rgba(255,255,255,0.55)" }}
+            className="leading-tight mt-1"
+            style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)" }}
           >
             {artist}
           </p>
 
           {/* Progress bar — ~35% played */}
           <div
-            className="mt-2 rounded-full overflow-hidden"
-            style={{ height: "2px", backgroundColor: "rgba(255,255,255,0.25)" }}
+            className="mt-3 rounded-full overflow-hidden"
+            style={{ height: "3px", backgroundColor: "rgba(255,255,255,0.25)" }}
           >
             <div className="h-full bg-white" style={{ width: "35%" }} />
           </div>
 
           {/* Transport: skip back / play / skip forward */}
-          <div className="mt-2 flex items-center justify-center gap-3 text-white">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+          <div className="mt-3 flex items-center justify-center gap-5 text-white">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="20 4 9 12 20 20 20 4" />
               <rect x="5" y="4" width="2" height="16" />
             </svg>
             <span
               className="rounded-full bg-white text-black flex items-center justify-center"
-              style={{ width: "18px", height: "18px" }}
+              style={{ width: "28px", height: "28px" }}
             >
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <polygon points="6 4 20 12 6 20 6 4" />
               </svg>
             </span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="4 4 15 12 4 20 4 4" />
               <rect x="17" y="4" width="2" height="16" />
             </svg>
@@ -161,7 +161,7 @@ function Phone({ media, title, artist, effect }: PhoneConfig) {
       </div>
 
       {effect ? (
-        <figcaption className="text-[10px] uppercase tracking-wider text-[var(--color-ink-muted)] font-medium">
+        <figcaption className="text-[11px] uppercase tracking-wider text-[var(--color-ink-muted)] font-medium">
           {effect}
         </figcaption>
       ) : null}
