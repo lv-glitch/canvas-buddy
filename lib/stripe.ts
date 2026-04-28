@@ -22,12 +22,13 @@ export function getStripe(): Stripe {
   return _client;
 }
 
-/** Pricing IDs — set these from your Stripe dashboard once products exist. */
+/** Pricing IDs — read from env per-call so `fly secrets set` takes effect
+ *  on the next request without requiring a fresh build/deploy. (Reading
+ *  process.env once at module load would let Next.js inline empty strings
+ *  at build time when the var isn't set yet.) */
 export const STRIPE_PRICE_IDS = {
-  pro: process.env.STRIPE_PRICE_PRO || "",
-  // One-time per-canvas watermark-removal price (Phase B — needs watermark
-  // rendering work in canvas-maker before we can take money for it).
-  perCanvas: process.env.STRIPE_PRICE_PER_CANVAS || "",
+  get pro() { return process.env.STRIPE_PRICE_PRO || ""; },
+  get perCanvas() { return process.env.STRIPE_PRICE_PER_CANVAS || ""; },
 };
 
 /** Origin for Checkout return URLs. Override locally with NEXT_PUBLIC_SITE_URL. */
