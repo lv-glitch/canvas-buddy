@@ -44,37 +44,55 @@ export async function POST(req: Request) {
   const stripe = getStripe();
   const returnUrl = `${siteOrigin(req)}/app?checkout=cancelled`;
 
-  // For the cancel flow we need an active subscription id, fetched live
-  // from Stripe. If the sub is already scheduled to cancel (the user
-  // clicked Cancel earlier), Stripe rejects re-opening the cancel flow —
-  // fall back to the general portal so they can reactivate.
-  let flowData = undefined;
-  if (flow === "cancel") {
-    const subs = await stripe.subscriptions.list({
-      customer: userRow.stripe_customer_id,
-      status: "active",
-      limit: 1,
-    });
-    const sub = subs.data[0];
-    if (sub && !sub.cancel_at_period_end) {
-      flowData = {
-        type: "subscription_cancel" as const,
-        subscription_cancel: { subscription: sub.id },
-        after_completion: {
-          type: "redirect" as const,
-          redirect: { return_url: returnUrl },
-        },
-      };
+  // For the cancel flow we need an active subscription id. If the user
+  // already scheduled the sub to cancel — via cancel_at_period_end OR a
+  // specific cancel_at timestamp — Stripe will reject the cancel flow.
+  // Try it first, fall back to the general portal on rejection so the
+  // user can reactivate or do other things.
+  async function createSession(useCancelFlow: boolean) {
+    let flowData = undefined;
+    if (useCancelFlow) {
+      const subs = await stripe.subscriptions.list({
+        customer: userRow!.stripe_customer_id!,
+        status: "active",
+        limit: 1,
+      });
+      const sub = subs.data[0];
+      if (sub) {
+        flowData = {
+          type: "subscription_cancel" as const,
+          subscription_cancel: { subscription: sub.id },
+          after_completion: {
+            type: "redirect" as const,
+            redirect: { return_url: returnUrl },
+          },
+        };
+      }
     }
-    // No active sub OR already cancelling → fall through to general portal,
-    // where the user can reactivate, see invoices, update payment method.
+    return stripe.billingPortal.sessions.create({
+      customer: userRow!.stripe_customer_id!,
+      return_url: returnUrl,
+      flow_data: flowData,
+    });
   }
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: userRow.stripe_customer_id,
-    return_url: returnUrl,
-    flow_data: flowData,
-  });
+  let session;
+  try {
+    session = await createSession(flow === "cancel");
+  } catch (err) {
+    // Most common reason: the subscription is already scheduled to
+    // cancel, so Stripe refuses to re-open the cancel flow. Retry as
+    // the general portal — same surface, but no flow_data, so it just
+    // shows the customer's full self-serve UI.
+    const msg = err instanceof Error ? err.message : "";
+    if (flow === "cancel" && /already set to be canceled/i.test(msg)) {
+      console.log("[portal] cancel flow rejected — falling back to general portal");
+      session = await createSession(false);
+    } else {
+      console.error("[portal] stripe error:", msg);
+      return NextResponse.json({ error: msg || "Stripe API call failed." }, { status: 500 });
+    }
+  }
 
   return NextResponse.json({ url: session.url });
 }
