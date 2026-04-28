@@ -153,6 +153,7 @@ export default function CanvasBuddyApp() {
               duration: number;
               videoURL: string | null;
               thumbnailURL: string | null;
+              paid_one_off_id: string | null;
             }>).map((r) => ({
               id: r.id,
               name: r.name,
@@ -161,6 +162,7 @@ export default function CanvasBuddyApp() {
               duration: r.duration,
               thumbnailURL: r.thumbnailURL || "",
               videoURL: r.videoURL || "",
+              paidOneOffId: r.paid_one_off_id,
             }))
           );
         }
@@ -395,7 +397,10 @@ export default function CanvasBuddyApp() {
   }
 
   function downloadFromList(c: SavedCanvas) {
-    if (plan === "pro" || plan === "payg") {
+    // Pro users always download direct. So do free users on a canvas
+    // that's already been unlocked via the $4.99 one-off — no upsell
+    // modal once they've paid.
+    if (plan === "pro" || plan === "payg" || c.paidOneOffId) {
       triggerDownload(c.videoURL, `${c.name}.mp4`);
     } else {
       setDownloadModalFor(c);

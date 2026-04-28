@@ -8,6 +8,10 @@ export interface SavedCanvas {
   duration: number;
   thumbnailURL: string;
   videoURL: string;
+  /** Set after the user pays the $4.99 one-off to remove the watermark
+   *  on this specific canvas. Free users with a paid canvas should be
+   *  able to download it without seeing the upsell modal again. */
+  paidOneOffId?: string | null;
 }
 
 interface RightPanelProps {
