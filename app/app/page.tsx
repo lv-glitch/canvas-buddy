@@ -77,20 +77,38 @@ export default function CanvasBuddyApp() {
   const [downloadModalFor, setDownloadModalFor] = useState<SavedCanvas | null>(null);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
-  // Banner shown briefly after Stripe Checkout returns. Reads ?checkout=
-  // straight off window.location on mount (avoids the useSearchParams
-  // Suspense requirement that breaks static prerender), then strips the
-  // param via history.replaceState so refresh doesn't keep it around.
-  const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancelled" | null>(null);
+  // Banner shown briefly after a Stripe Checkout returns. Covers two
+  // distinct flows:
+  //   ?checkout=success   → Pro subscription upgrade
+  //   ?unlock=success     → per-canvas $4.99 unlock
+  //   *=cancelled         → user closed Stripe without paying
+  // Read straight off window.location to avoid the useSearchParams Suspense
+  // requirement that breaks static prerender. Strip params on mount via
+  // history.replaceState so refresh doesn't keep the banner around.
+  type Banner =
+    | "checkout-success"
+    | "checkout-cancelled"
+    | "unlock-success"
+    | "unlock-cancelled"
+    | null;
+  const [checkoutBanner, setCheckoutBanner] = useState<Banner>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const status = params.get("checkout");
-    if (status === "success" || status === "cancelled") {
-      setCheckoutBanner(status as "success" | "cancelled");
+    const checkout = params.get("checkout");
+    const unlock = params.get("unlock");
+    let banner: Banner = null;
+    if (checkout === "success") banner = "checkout-success";
+    else if (checkout === "cancelled") banner = "checkout-cancelled";
+    else if (unlock === "success") banner = "unlock-success";
+    else if (unlock === "cancelled") banner = "unlock-cancelled";
+    if (banner) {
+      setCheckoutBanner(banner);
       const url = new URL(window.location.href);
       url.searchParams.delete("checkout");
+      url.searchParams.delete("unlock");
+      url.searchParams.delete("canvas");
       window.history.replaceState({}, "", url.toString());
-      if (status === "success") {
+      if (banner === "checkout-success" || banner === "unlock-success") {
         const t = setTimeout(() => setCheckoutBanner(null), 8000);
         return () => clearTimeout(t);
       }
@@ -421,33 +439,25 @@ export default function CanvasBuddyApp() {
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)]">
-      {checkoutBanner === "success" && (
-        <div className="bg-[var(--color-accent)]/15 border-b border-[var(--color-accent)]/30 text-[var(--color-accent)] px-4 py-2.5 text-sm flex items-center justify-between">
-          <span className="font-medium">
-            Welcome to Pro — your account is upgraded. Watermark-free, unlimited renders.
-          </span>
-          <button
-            type="button"
-            onClick={() => setCheckoutBanner(null)}
-            aria-label="Dismiss"
-            className="text-[var(--color-accent)]/80 hover:text-[var(--color-accent)] text-xs font-semibold"
-          >
-            DISMISS
-          </button>
-        </div>
+      {checkoutBanner === "checkout-success" && (
+        <Banner color="accent" onDismiss={() => setCheckoutBanner(null)}>
+          Welcome to Pro — your account is upgraded. Watermark-free, unlimited renders.
+        </Banner>
       )}
-      {checkoutBanner === "cancelled" && (
-        <div className="bg-[var(--color-surface-2)] border-b border-[var(--color-border)] text-[var(--color-ink-dim)] px-4 py-2.5 text-sm flex items-center justify-between">
-          <span>Checkout was cancelled. No charge.</span>
-          <button
-            type="button"
-            onClick={() => setCheckoutBanner(null)}
-            aria-label="Dismiss"
-            className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] text-xs font-semibold"
-          >
-            DISMISS
-          </button>
-        </div>
+      {checkoutBanner === "unlock-success" && (
+        <Banner color="purple" onDismiss={() => setCheckoutBanner(null)}>
+          Watermark removed — re-rendering your canvas. Refresh in a few seconds.
+        </Banner>
+      )}
+      {checkoutBanner === "checkout-cancelled" && (
+        <Banner color="muted" onDismiss={() => setCheckoutBanner(null)}>
+          Checkout was cancelled. No charge.
+        </Banner>
+      )}
+      {checkoutBanner === "unlock-cancelled" && (
+        <Banner color="muted" onDismiss={() => setCheckoutBanner(null)}>
+          Watermark unlock cancelled. No charge.
+        </Banner>
       )}
       <TopNav
         videosUsed={videosUsed}
@@ -532,10 +542,21 @@ export default function CanvasBuddyApp() {
           }
           setDownloadModalFor(null);
         }}
-        onUpgrade={() => {
-          // Stub: a real flow would launch Stripe Checkout for the $4.99 product
-          alert("Stub: would launch Stripe Checkout for $4.99 watermark-free download.");
-          setDownloadModalFor(null);
+        onUpgrade={async () => {
+          if (!downloadModalFor) return;
+          try {
+            const r = await fetch("/api/checkout/canvas", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ canvasId: downloadModalFor.id }),
+            });
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok || !data.url) throw new Error(data.error || "Checkout failed.");
+            window.location.href = data.url;
+          } catch (e) {
+            alert(`Couldn't start checkout:\n\n${e instanceof Error ? e.message : String(e)}`);
+            setDownloadModalFor(null);
+          }
         }}
       />
     </div>
@@ -543,6 +564,38 @@ export default function CanvasBuddyApp() {
 }
 
 /* ---------- helpers ---------- */
+
+function Banner({
+  color,
+  onDismiss,
+  children,
+}: {
+  color: "accent" | "purple" | "muted";
+  onDismiss: () => void;
+  children: React.ReactNode;
+}) {
+  const styles =
+    color === "accent"
+      ? "bg-[var(--color-accent)]/15 border-[var(--color-accent)]/30 text-[var(--color-accent)]"
+      : color === "purple"
+      ? "bg-[var(--color-purple)]/15 border-[var(--color-purple)]/30 text-[var(--color-purple)]"
+      : "bg-[var(--color-surface-2)] border-[var(--color-border)] text-[var(--color-ink-dim)]";
+  return (
+    <div
+      className={`border-b px-4 py-2.5 text-sm flex items-center justify-between ${styles}`}
+    >
+      <span className="font-medium">{children}</span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="opacity-80 hover:opacity-100 text-xs font-semibold"
+      >
+        DISMISS
+      </button>
+    </div>
+  );
+}
 
 function labelFor(items: OptionItem[], value: string): string {
   return items.find((i) => i.value === value)?.label ?? value;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getSupabase } from "@/lib/supabase";
+import { rerenderCanvasClean } from "@/lib/rerender";
 
 /** POST /api/stripe/webhook — Stripe webhook handler.
  *
@@ -44,7 +45,10 @@ export async function POST(req: Request) {
       case "checkout.session.completed": {
         const session = event.data.object;
         const userId = session.metadata?.clerk_user_id;
+        const canvasId = session.metadata?.canvas_id;
+
         if (userId && session.mode === "subscription") {
+          // Pro subscription completed → upgrade plan.
           await supabase
             .from("users")
             .update({
@@ -52,6 +56,40 @@ export async function POST(req: Request) {
               stripe_customer_id: (session.customer as string) ?? undefined,
             })
             .eq("id", userId);
+        }
+
+        if (userId && canvasId && session.mode === "payment") {
+          // Per-canvas $4.99 unlock — record the payment, then re-render the
+          // canvas without the watermark and swap the storage object. We do
+          // this synchronously inside the webhook so that by the time the
+          // user lands back on /app the clean copy is ready. ~5-8 seconds
+          // of webhook processing is well within Stripe's 30s timeout.
+          const paymentId =
+            (session.payment_intent as string) || session.id;
+          await supabase
+            .from("canvases")
+            .update({
+              paid_one_off_id: paymentId,
+              status: "rendering",
+            })
+            .eq("id", canvasId)
+            .eq("user_id", userId);
+          try {
+            await rerenderCanvasClean(canvasId);
+          } catch (err) {
+            // If the re-render fails, leave paid_one_off_id set (the user
+            // paid) but mark the row failed so we can retry/refund. They
+            // got watermark-free in the DB sense; the file's still bad.
+            console.error(`[webhook] rerender failed for ${canvasId}:`, err);
+            await supabase
+              .from("canvases")
+              .update({
+                status: "failed",
+                error_message:
+                  err instanceof Error ? err.message : "Re-render failed",
+              })
+              .eq("id", canvasId);
+          }
         }
         break;
       }
