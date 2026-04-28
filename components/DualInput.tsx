@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Turnstile } from "./Turnstile";
 
 const TOOL_API =
   process.env.NEXT_PUBLIC_TOOL_API || "http://localhost:3737";
@@ -17,6 +18,7 @@ export function DualInput({ onPickFile }: DualInputProps) {
   const [aiPrompt, setAIPrompt] = useState("");
   const [aiBusy, setAIBusy] = useState(false);
   const [aiError, setAIError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   function pickViaInput() {
     fileInput.current?.click();
@@ -37,7 +39,7 @@ export function DualInput({ onPickFile }: DualInputProps) {
       const r = await fetch(`${TOOL_API}/api/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiPrompt }),
+        body: JSON.stringify({ prompt: aiPrompt, turnstileToken }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -166,6 +168,7 @@ export function DualInput({ onPickFile }: DualInputProps) {
                 >
                   {aiBusy ? "Generating…" : "Generate"}
                 </button>
+                <Turnstile onToken={setTurnstileToken} className="mt-2" />
               </div>
             </div>
           </div>

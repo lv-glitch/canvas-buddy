@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { Turnstile } from "@/components/Turnstile";
 
 export interface OptionItem {
   value: string;
@@ -22,6 +23,7 @@ interface LeftPanelProps {
   setAIPrompt: (s: string) => void;
   aiGenerationsLeft: number;
   onAIGenerate: () => void;
+  onTurnstileToken: (token: string) => void;
   aiBusy: boolean;
   aiError: string | null;
 
@@ -160,6 +162,9 @@ function SourceSection(props: LeftPanelProps) {
           >
             {props.aiBusy ? "Generating…" : "✨ Generate"}
           </button>
+          {/* Invisible bot check — only renders interaction UI for suspect
+              traffic. Token sets on mount; refreshes itself on expiry. */}
+          <Turnstile onToken={props.onTurnstileToken} className="mt-1" />
           {props.aiError ? (
             <p className="text-[11px] text-[#ff6b6b] leading-snug">
               {props.aiError}

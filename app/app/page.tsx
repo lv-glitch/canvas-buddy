@@ -60,6 +60,7 @@ export default function CanvasBuddyApp() {
   const [aiPrompt, setAIPrompt] = useState<string>("");
   const [aiBusy, setAIBusy] = useState<boolean>(false);
   const [aiError, setAIError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
 
   // Effect / filter / duration
   const [effect, setEffect] = useState<string>("zoom");
@@ -272,7 +273,7 @@ export default function CanvasBuddyApp() {
       const r = await fetch(`${TOOL_API}/api/generate-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiPrompt }),
+        body: JSON.stringify({ prompt: aiPrompt, turnstileToken }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -484,6 +485,7 @@ export default function CanvasBuddyApp() {
           setAIPrompt={setAIPrompt}
           aiGenerationsLeft={aiGenerationsLeft}
           onAIGenerate={aiGenerate}
+          onTurnstileToken={setTurnstileToken}
           aiBusy={aiBusy}
           aiError={aiError}
           effect={effect}
