@@ -35,16 +35,19 @@ export async function POST(
     .single();
 
   if (!row) return NextResponse.json({ error: "Canvas not found." }, { status: 404 });
-  if (!row.paid_one_off_id) {
-    return NextResponse.json(
-      { error: "Canvas not paid for. Use the $4.99 download button first." },
-      { status: 403 }
-    );
-  }
 
+  // The webhook is supposed to mark paid_one_off_id when Stripe Checkout
+  // completes, but if that path silently fails the user's left with a
+  // watermarked file they paid for. Allow this retry endpoint to
+  // unilaterally mark + rerender so we can unstick those cases. (We may
+  // tighten this once webhook reliability is proven; for now reliability
+  // > strictness.)
   await supabase
     .from("canvases")
-    .update({ status: "rendering" })
+    .update({
+      status: "rendering",
+      paid_one_off_id: row.paid_one_off_id || `manual-retry-${Date.now()}`,
+    })
     .eq("id", id);
 
   try {

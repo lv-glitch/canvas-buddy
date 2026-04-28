@@ -46,6 +46,15 @@ export async function POST(req: Request) {
         const session = event.data.object;
         const userId = session.metadata?.clerk_user_id;
         const canvasId = session.metadata?.canvas_id;
+        // Log the entry so we can see what mode + metadata Stripe sent.
+        // Critical for diagnosing "webhook delivered but DB unchanged" cases.
+        console.log(
+          `[webhook] checkout.session.completed: ` +
+          `mode=${session.mode} ` +
+          `userId=${userId || "(missing)"} ` +
+          `canvasId=${canvasId || "(missing)"} ` +
+          `customer=${session.customer || "(none)"}`
+        );
 
         if (userId && session.mode === "subscription") {
           // Pro subscription completed → upgrade plan.
