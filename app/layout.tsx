@@ -13,16 +13,22 @@ export const metadata: Metadata = {
   title: "Canvas Buddy — Spotify Canvas videos in seconds",
   description:
     "Upload your art or describe it. Pick an effect and a filter. Export a Spotify Canvas video in seconds.",
-  metadataBase: new URL("https://canvasbuddy.app"),
+  // metadataBase = canonical origin. Next.js resolves relative URLs in
+  // openGraph.images / twitter.images / etc. against this. opengraph-image.tsx
+  // lives at /opengraph-image and is auto-discovered, so no need to repeat
+  // the URL here — Next builds the full <meta property="og:image"> tag.
+  metadataBase: new URL("https://canvasbuddy.io"),
   openGraph: {
     title: "Canvas Buddy — Spotify Canvas videos in seconds",
     description:
       "Upload your art or describe it. Pick an effect and a filter. Export a Spotify Canvas video in seconds.",
     type: "website",
+    siteName: "Canvas Buddy",
+    url: "https://canvasbuddy.io",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Canvas Buddy",
+    title: "Canvas Buddy — Spotify Canvas videos in seconds",
     description:
       "Upload your art or describe it. Pick an effect and a filter. Export a Spotify Canvas video in seconds.",
   },

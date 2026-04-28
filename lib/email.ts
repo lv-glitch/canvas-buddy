@@ -80,6 +80,38 @@ function shell(title: string, body: string): string {
 </body></html>`;
 }
 
+export function welcomeNewUserEmail(): { subject: string; html: string } {
+  return {
+    subject: "Welcome to Canvas Buddy",
+    html: shell(
+      "Welcome.",
+      `<p style="font-size:15px;line-height:1.6;color:${TEXT_COLOR};">
+         Thanks for signing up. Canvas Buddy turns a still image into a
+         9:16 looping MP4 that fits Spotify's Canvas spec — no editing
+         software, no rendering software.
+       </p>
+       <p style="font-size:15px;line-height:1.6;color:${TEXT_COLOR};">
+         Three steps to your first Canvas:
+       </p>
+       <ol style="font-size:15px;line-height:1.7;padding-left:20px;color:${TEXT_COLOR};">
+         <li>Upload an album cover, photo, or generate one with AI.</li>
+         <li>Pick an effect (zoom, drift, glitch, …) and a color filter.</li>
+         <li>Hit Generate Canvas. The MP4 lands in your library.</li>
+       </ol>
+       <p style="margin-top:24px;">
+         <a href="${APP_URL}/app" style="display:inline-block;background:${BRAND_GREEN};color:#000;font-weight:600;padding:12px 24px;border-radius:24px;text-decoration:none;">
+           Render your first Canvas
+         </a>
+       </p>
+       <p style="margin-top:24px;font-size:13px;color:${MUTED_COLOR};">
+         You're on the Free plan — 5 canvases per month with our
+         watermark. Upgrade to Pro ($9.99/mo) to remove it and unlock
+         unlimited renders.
+       </p>`
+    ),
+  };
+}
+
 export function welcomeToProEmail(): { subject: string; html: string } {
   return {
     subject: "Welcome to Canvas Buddy Pro",

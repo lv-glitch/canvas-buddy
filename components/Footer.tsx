@@ -9,12 +9,24 @@ export function Footer() {
           <Logo size={22} />
           <span className="font-semibold text-[var(--color-ink)]">Canvas Buddy</span>
         </div>
-        <div className="flex items-center gap-5 text-xs sm:text-sm text-[var(--color-ink-muted)]">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-sm text-[var(--color-ink-muted)]">
           <Link
             href="/help"
             className="hover:text-[var(--color-ink)] transition-colors"
           >
             Help
+          </Link>
+          <Link
+            href="/privacy"
+            className="hover:text-[var(--color-ink)] transition-colors"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/terms"
+            className="hover:text-[var(--color-ink)] transition-colors"
+          >
+            Terms
           </Link>
           <a
             href="mailto:hi@canvasbuddy.io"

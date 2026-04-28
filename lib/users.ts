@@ -1,5 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getSupabase, type UserRow } from "./supabase";
+import { sendEmail, welcomeNewUserEmail } from "./email";
 
 /**
  * Fetch the current user's row, creating it on first sign-in. Idempotent —
@@ -40,13 +41,23 @@ export async function getOrCreateCurrentUser(): Promise<UserRow | null> {
     .single();
   if (writeErr) {
     // Race-condition fallback: if another concurrent request inserted first,
-    // the unique violation re-fires the read.
+    // the unique violation re-fires the read. No welcome email here — the
+    // other request fires it.
     if (writeErr.code === "23505") {
       const { data: re } = await sb
         .from("users").select("*").eq("id", userId).single();
       return re as UserRow;
     }
     throw writeErr;
+  }
+
+  // Brand-new user — fire the welcome email. Fire-and-forget; failures
+  // never break signup. Only fire when we have an email; users without
+  // a primary email (rare, but possible if Clerk is mid-signup) get
+  // the welcome on the next /api/me hit when their email exists.
+  if (email) {
+    const tmpl = welcomeNewUserEmail();
+    void sendEmail({ to: email, subject: tmpl.subject, html: tmpl.html });
   }
   return inserted as UserRow;
 }
