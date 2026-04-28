@@ -143,6 +143,9 @@ export function EffectPicker({ externalFile }: EffectPickerProps = {}) {
       fd.append("filter", filter);
       fd.append("layout", "fill");
       fd.append("duration", DEMO_DURATION);
+      // The landing-page demo always renders with the watermark — it's the
+      // hook that motivates signing up to download a clean copy.
+      fd.append("watermark", "true");
       const r = await fetch(`${TOOL_API}/api/generate`, { method: "POST", body: fd });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));

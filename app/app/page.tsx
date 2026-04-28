@@ -286,6 +286,10 @@ export default function CanvasBuddyApp() {
       fd.append("filter", filter);
       fd.append("layout", "fill");
       fd.append("duration", String(duration));
+      // Pro renders are watermark-free; everyone else gets the brand mark
+      // baked into the bottom-right corner. Per-canvas unlock (Phase B) will
+      // re-render with watermark=false when paid_one_off_id is set.
+      fd.append("watermark", plan === "pro" ? "false" : "true");
       const r = await fetch(`${TOOL_API}/api/generate`, {
         method: "POST",
         body: fd,
