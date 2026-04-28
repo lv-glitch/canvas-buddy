@@ -50,6 +50,26 @@ export interface CanvasRow {
   created_at: string;
 }
 
+/** Bucket name — must match the one created by 003_storage.sql */
+export const CANVASES_BUCKET = "canvases";
+
+/**
+ * Issue a short-lived signed URL for an object in the canvases bucket.
+ * Returns null if the key is empty or the signing call fails — callers
+ * should treat null as "no playable URL yet".
+ */
+export async function signedCanvasUrl(
+  key: string | null,
+  ttlSeconds = 3600
+): Promise<string | null> {
+  if (!key) return null;
+  const { data, error } = await getSupabase()
+    .storage.from(CANVASES_BUCKET)
+    .createSignedUrl(key, ttlSeconds);
+  if (error || !data) return null;
+  return data.signedUrl;
+}
+
 export interface UserRow {
   id: string;
   email: string;

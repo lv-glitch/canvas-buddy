@@ -105,23 +105,22 @@ export default function CanvasBuddyApp() {
         }
         if (!cancelled && listRes.ok) {
           const { canvases: rows } = await listRes.json();
+          // The API resolves storage keys into short-lived signed URLs.
           // Map DB rows to the SavedCanvas shape the UI components already expect.
-          // For now, output_storage_key + thumbnail_storage_key are placeholders
-          // (we'll wire Supabase Storage in the next step). Until then, the
-          // library row is metadata-only — re-render to recreate the MP4.
           setCanvases(
             (rows as Array<{
               id: string; name: string; animation: string; filter: string;
-              duration: number; output_storage_key: string | null;
-              thumbnail_storage_key: string | null;
+              duration: number;
+              videoURL: string | null;
+              thumbnailURL: string | null;
             }>).map((r) => ({
               id: r.id,
               name: r.name,
-              effect: r.animation,
-              filter: r.filter,
+              effect: labelFor(EFFECTS, r.animation),
+              filter: labelFor(FILTERS, r.filter),
               duration: r.duration,
-              thumbnailURL: r.thumbnail_storage_key || "",
-              videoURL: r.output_storage_key || "",
+              thumbnailURL: r.thumbnailURL || "",
+              videoURL: r.videoURL || "",
             }))
           );
         }
@@ -201,37 +200,52 @@ export default function CanvasBuddyApp() {
         throw new Error(err.error || `Render failed (HTTP ${r.status})`);
       }
       const blob = await r.blob();
-      const videoURL = URL.createObjectURL(blob);
+      const localVideoURL = URL.createObjectURL(blob);
 
-      // Persist metadata to the DB so the library survives refresh.
-      // (Phase 2: also upload the MP4 + thumbnail to Supabase Storage so
-      // the *content* survives refresh, not just the metadata.)
+      // Upload the rendered MP4 + the source image (as the thumbnail) to
+      // Supabase Storage so the canvas survives refresh, not just the metadata.
+      // The route returns signed URLs we can use directly in <video>/<img>.
       let canvasId = String(Date.now());
+      let videoURL = localVideoURL;
+      let thumbnailURL = sourceURL!;
+      const canvasName = `Canvas ${canvases.length + 1}`;
       try {
-        const saveRes = await fetch("/api/canvases", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: `Canvas ${canvases.length + 1}`,
+        const fd = new FormData();
+        fd.append(
+          "metadata",
+          JSON.stringify({
+            name: canvasName,
             animation: effect,
             filter,
             duration,
             status: "done",
-          }),
-        });
+          })
+        );
+        fd.append("video", new File([blob], "canvas.mp4", { type: "video/mp4" }));
+        if (sourceFile) {
+          fd.append(
+            "thumbnail",
+            new File([sourceFile], "thumb." + (sourceFile.type === "image/png" ? "png" : "jpg"), {
+              type: sourceFile.type || "image/jpeg",
+            })
+          );
+        }
+        const saveRes = await fetch("/api/canvases", { method: "POST", body: fd });
         if (saveRes.ok) {
           const { canvas } = await saveRes.json();
           canvasId = canvas.id;
+          if (canvas.videoURL) videoURL = canvas.videoURL;
+          if (canvas.thumbnailURL) thumbnailURL = canvas.thumbnailURL;
         }
-      } catch { /* save failure is non-fatal — user still sees the result */ }
+      } catch { /* save failure is non-fatal — user still sees the in-memory result */ }
 
       const next: SavedCanvas = {
         id: canvasId,
-        name: `Canvas ${canvases.length + 1}`,
+        name: canvasName,
         effect: labelFor(EFFECTS, effect),
         filter: labelFor(FILTERS, filter),
         duration,
-        thumbnailURL: sourceURL!, // still image works as a thumbnail
+        thumbnailURL,
         videoURL,
       };
       setCanvases((cs) => [next, ...cs]);
