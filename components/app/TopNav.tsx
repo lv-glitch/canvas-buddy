@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { Logo } from "@/components/Logo";
 
@@ -12,6 +13,41 @@ interface TopNavProps {
 }
 
 export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNavProps) {
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingErr, setBillingErr] = useState<string | null>(null);
+
+  async function startCheckout() {
+    setBillingBusy(true);
+    setBillingErr(null);
+    try {
+      const r = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: "pro" }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.url) throw new Error(data.error || "Checkout failed.");
+      window.location.href = data.url;
+    } catch (e) {
+      setBillingErr(e instanceof Error ? e.message : String(e));
+      setBillingBusy(false);
+    }
+  }
+
+  async function openPortal() {
+    setBillingBusy(true);
+    setBillingErr(null);
+    try {
+      const r = await fetch("/api/portal", { method: "POST" });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.url) throw new Error(data.error || "Portal failed.");
+      window.location.href = data.url;
+    } catch (e) {
+      setBillingErr(e instanceof Error ? e.message : String(e));
+      setBillingBusy(false);
+    }
+  }
+
   const planLabel =
     plan === "pro" ? "Pro" : plan === "payg" ? "Per Canvas" : "Free plan";
   let status: string;
@@ -35,13 +71,26 @@ export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNav
         {status}
       </div>
 
-      {plan !== "pro" && (
-        <Link
-          href="/#pricing"
-          className="hidden sm:inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-black hover:bg-[var(--color-accent-hover)] transition-colors mr-3"
+      {plan !== "pro" ? (
+        <button
+          type="button"
+          onClick={startCheckout}
+          disabled={billingBusy}
+          className="hidden sm:inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-4 py-1.5 text-xs font-semibold text-black hover:bg-[var(--color-accent-hover)] transition-colors mr-3 disabled:opacity-60"
+          title={billingErr || undefined}
         >
-          Upgrade to Pro
-        </Link>
+          {billingBusy ? "Loading…" : "Upgrade to Pro"}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openPortal}
+          disabled={billingBusy}
+          className="hidden sm:inline-flex items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-1.5 text-xs font-semibold text-[var(--color-ink-dim)] hover:text-[var(--color-ink)] hover:border-[var(--color-ink-dim)] transition-colors mr-3 disabled:opacity-60"
+          title={billingErr || "Update payment method, see invoices, or cancel."}
+        >
+          {billingBusy ? "Loading…" : "Manage subscription"}
+        </button>
       )}
 
       <button

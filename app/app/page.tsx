@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TopNav } from "@/components/app/TopNav";
 import { LeftPanel, type OptionItem } from "@/components/app/LeftPanel";
 import { CenterPanel } from "@/components/app/CenterPanel";
@@ -76,6 +77,26 @@ export default function CanvasBuddyApp() {
   // Modals
   const [downloadModalFor, setDownloadModalFor] = useState<SavedCanvas | null>(null);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+
+  // Banner shown briefly after Stripe Checkout returns successfully. Reads
+  // ?checkout=success on first paint, then strips the param so refresh
+  // doesn't show it again.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancelled" | null>(null);
+  useEffect(() => {
+    const status = searchParams.get("checkout");
+    if (status === "success" || status === "cancelled") {
+      setCheckoutBanner(status as "success" | "cancelled");
+      router.replace("/app");
+      // Auto-dismiss success banner after 8s — failure stays until clicked.
+      if (status === "success") {
+        const t = setTimeout(() => setCheckoutBanner(null), 8000);
+        return () => clearTimeout(t);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Cleanup all object URLs on unmount.
   useEffect(() => {
@@ -397,6 +418,34 @@ export default function CanvasBuddyApp() {
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)]">
+      {checkoutBanner === "success" && (
+        <div className="bg-[var(--color-accent)]/15 border-b border-[var(--color-accent)]/30 text-[var(--color-accent)] px-4 py-2.5 text-sm flex items-center justify-between">
+          <span className="font-medium">
+            Welcome to Pro — your account is upgraded. Watermark-free, unlimited renders.
+          </span>
+          <button
+            type="button"
+            onClick={() => setCheckoutBanner(null)}
+            aria-label="Dismiss"
+            className="text-[var(--color-accent)]/80 hover:text-[var(--color-accent)] text-xs font-semibold"
+          >
+            DISMISS
+          </button>
+        </div>
+      )}
+      {checkoutBanner === "cancelled" && (
+        <div className="bg-[var(--color-surface-2)] border-b border-[var(--color-border)] text-[var(--color-ink-dim)] px-4 py-2.5 text-sm flex items-center justify-between">
+          <span>Checkout was cancelled. No charge.</span>
+          <button
+            type="button"
+            onClick={() => setCheckoutBanner(null)}
+            aria-label="Dismiss"
+            className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] text-xs font-semibold"
+          >
+            DISMISS
+          </button>
+        </div>
+      )}
       <TopNav
         videosUsed={videosUsed}
         videosLimit={videosLimit}
