@@ -25,6 +25,10 @@ export async function GET() {
       videosUsed: user.videos_used_this_period,
       aiGenerationsUsed: user.ai_generations_used_this_period,
       periodResetsAt: user.period_resets_at,
+      // Subscription lifecycle — null/false for non-Pro users. UI shows
+      // "Pro · ends Apr 28" if cancelAtPeriodEnd is true.
+      subscriptionEndsAt: user.subscription_current_period_end,
+      cancelAtPeriodEnd: !!user.subscription_cancel_at_period_end,
     },
     quota: {
       videosLimit: limit.videos === Infinity ? null : limit.videos,

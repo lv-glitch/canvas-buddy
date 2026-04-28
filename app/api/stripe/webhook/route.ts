@@ -123,10 +123,23 @@ export async function POST(req: Request) {
         const sub = event.data.object;
         const userId = sub.metadata?.clerk_user_id;
         const isActive = sub.status === "active" || sub.status === "trialing";
+        // current_period_end is on the subscription's first item per Stripe's
+        // 2024 API change; some libraries still expose it on the root.
+        // Try both to be resilient.
+        const periodEndUnix =
+          (sub as unknown as { current_period_end?: number }).current_period_end ??
+          sub.items?.data?.[0]?.current_period_end ??
+          null;
         if (userId) {
           await supabase
             .from("users")
-            .update({ plan: isActive ? "pro" : "free" })
+            .update({
+              plan: isActive ? "pro" : "free",
+              subscription_current_period_end: periodEndUnix
+                ? new Date(periodEndUnix * 1000).toISOString()
+                : null,
+              subscription_cancel_at_period_end: !!sub.cancel_at_period_end,
+            })
             .eq("id", userId);
         }
         break;
@@ -136,7 +149,15 @@ export async function POST(req: Request) {
         const sub = event.data.object;
         const userId = sub.metadata?.clerk_user_id;
         if (userId) {
-          await supabase.from("users").update({ plan: "free" }).eq("id", userId);
+          // Subscription is fully gone — clear lifecycle fields too.
+          await supabase
+            .from("users")
+            .update({
+              plan: "free",
+              subscription_current_period_end: null,
+              subscription_cancel_at_period_end: false,
+            })
+            .eq("id", userId);
         }
         break;
       }

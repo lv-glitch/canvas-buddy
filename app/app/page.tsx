@@ -51,6 +51,8 @@ export default function CanvasBuddyApp() {
   const [videosUsed, setVideosUsed] = useState<number>(0);
   const [videosLimit, setVideosLimit] = useState<number | null>(5);
   const [aiGenerationsLeft, setAIGenerationsLeft] = useState<number>(5);
+  const [subscriptionEndsAt, setSubscriptionEndsAt] = useState<string | null>(null);
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState<boolean>(false);
 
   // Source image — keep both the File (needed for multipart upload to the
   // backend) and a blob URL (for the live preview img tag).
@@ -156,6 +158,8 @@ export default function CanvasBuddyApp() {
           setAIGenerationsLeft(
             quota.aiGenerationsRemaining === -1 ? Infinity : quota.aiGenerationsRemaining
           );
+          setSubscriptionEndsAt(user.subscriptionEndsAt ?? null);
+          setCancelAtPeriodEnd(!!user.cancelAtPeriodEnd);
         }
         if (!cancelled && listRes.ok) {
           const { canvases: rows } = await listRes.json();
@@ -536,6 +540,8 @@ export default function CanvasBuddyApp() {
         videosUsed={videosUsed}
         videosLimit={videosLimit}
         plan={plan}
+        subscriptionEndsAt={subscriptionEndsAt}
+        cancelAtPeriodEnd={cancelAtPeriodEnd}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 

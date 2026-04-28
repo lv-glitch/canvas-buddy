@@ -78,6 +78,8 @@ export interface UserRow {
   videos_used_this_period: number;
   ai_generations_used_this_period: number;
   period_resets_at: string;
+  subscription_current_period_end: string | null;
+  subscription_cancel_at_period_end: boolean | null;
   created_at: string;
   updated_at: string;
 }

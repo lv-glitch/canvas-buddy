@@ -9,10 +9,19 @@ interface TopNavProps {
   videosUsed: number;
   videosLimit: number | null;            // null = unlimited (pro)
   plan: "free" | "payg" | "pro";
+  subscriptionEndsAt?: string | null;
+  cancelAtPeriodEnd?: boolean;
   onOpenSettings: () => void;
 }
 
-export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNavProps) {
+export function TopNav({
+  videosUsed,
+  videosLimit,
+  plan,
+  subscriptionEndsAt,
+  cancelAtPeriodEnd,
+  onOpenSettings,
+}: TopNavProps) {
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingErr, setBillingErr] = useState<string | null>(null);
 
@@ -58,7 +67,16 @@ export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNav
   const planLabel =
     plan === "pro" ? "Pro" : plan === "payg" ? "Per Canvas" : "Free plan";
   let status: string;
-  if (plan === "pro" || videosLimit === null) {
+  if (plan === "pro" && cancelAtPeriodEnd && subscriptionEndsAt) {
+    // Cancelled-but-still-active — show the end date so user knows when
+    // they revert to free. Renew nudge happens via the (still-visible)
+    // Manage subscription button.
+    const ends = new Date(subscriptionEndsAt).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+    status = `Pro · ends ${ends}`;
+  } else if (plan === "pro" || videosLimit === null) {
     status = `${planLabel} · unlimited`;
   } else {
     const remaining = Math.max(0, videosLimit - videosUsed);

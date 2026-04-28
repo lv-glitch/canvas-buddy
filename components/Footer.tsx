@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "./Logo";
 
 export function Footer() {
@@ -8,9 +9,21 @@ export function Footer() {
           <Logo size={22} />
           <span className="font-semibold text-[var(--color-ink)]">Canvas Buddy</span>
         </div>
-        <p className="text-[var(--color-ink-muted)] text-xs sm:text-sm">
-          Made for artists. Not affiliated with Spotify.
-        </p>
+        <div className="flex items-center gap-5 text-xs sm:text-sm text-[var(--color-ink-muted)]">
+          <Link
+            href="/help"
+            className="hover:text-[var(--color-ink)] transition-colors"
+          >
+            Help
+          </Link>
+          <a
+            href="mailto:hi@canvasbuddy.io"
+            className="hover:text-[var(--color-ink)] transition-colors"
+          >
+            Contact
+          </a>
+          <span>Made for artists. Not affiliated with Spotify.</span>
+        </div>
       </div>
     </footer>
   );
