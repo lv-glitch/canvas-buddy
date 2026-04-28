@@ -1,22 +1,16 @@
-# Drop your example MP4s here
+# Spotify mockup artwork
 
-Any `.mp4` or `.webm` file you place in this folder will appear in the
-"Examples" section of the landing page automatically (no code changes
-needed). The Server Component reads this directory at request time.
+The "See it on Spotify" section on the landing page renders four phone
+mockups with full-bleed background art. Drop JPGs here named:
 
-Naming tip: prefix files with a number for ordering, e.g.:
+  canvas1.jpg
+  canvas2.jpg
+  canvas3.jpg
+  canvas4.jpg
 
-  01-cosmic.mp4
-  02-noir-portrait.mp4
-  03-vhs-album.mp4
+To use different filenames or change the song titles / artist names /
+filter labels, edit the `PHONES` array at the top of
+`components/Examples.tsx`.
 
-Recommended specs (match the actual Canvas Buddy output):
-
-  - 9:16 vertical, 1080×1920
-  - 3–8 seconds, looping
-  - H.264 in an .mp4 container
-  - Under 8 MB
-
-Files in this folder are committed to the repo, so anyone who clones it
-will see the same example reel. To swap them out, just replace the file
-on disk.
+The legacy MP4 reel (`01-…`, `02-…`) lived here under a previous design
+and is unused now — safe to delete those files when you commit fresh art.

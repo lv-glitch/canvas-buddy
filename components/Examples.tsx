@@ -1,103 +1,134 @@
-import { readdir } from "node:fs/promises";
-import path from "node:path";
+// Spec-faithful Spotify mobile-player mockups. Drop new artwork into
+// public/examples/ and update the array below — no other code changes.
+const PHONES: PhoneConfig[] = [
+  { image: "/examples/canvas1.jpg", title: "Song Title 1", artist: "Artist 1", effect: "Zoom + Noir" },
+  { image: "/examples/canvas2.jpg", title: "Song Title 2", artist: "Artist 2", effect: "Drift + Coast" },
+  { image: "/examples/canvas3.jpg", title: "Song Title 3", artist: "Artist 3", effect: "Pulse + Golden Hour" },
+  { image: "/examples/canvas4.jpg", title: "Song Title 4", artist: "Artist 4", effect: "Glitch + VHS" },
+];
 
-const EXAMPLE_DIR = path.join(process.cwd(), "public", "examples");
-const VIDEO_RE = /\.(mp4|webm)$/i;
-
-async function listExamples() {
-  try {
-    const files = await readdir(EXAMPLE_DIR);
-    return files.filter((f) => VIDEO_RE.test(f)).sort();
-  } catch {
-    return [];
-  }
+interface PhoneConfig {
+  image: string;
+  title: string;
+  artist: string;
+  effect: string;
 }
 
-// Filename convention: `<order>-<Artist Words>--<Track Words>.mp4`
-//   - leading "01-" / "02-" for sort order (stripped from label)
-//   - single hyphen separates words within artist or track
-//   - DOUBLE hyphen separates artist from track
-//   - filename case is preserved verbatim (so "stelle e luna" stays lowercase)
-//
-// Falls back to a permissive split for older files.
-function labelFromFilename(name: string) {
-  const stem = name
-    .replace(VIDEO_RE, "")
-    .replace(/^\d+[-_\s]+/, "")
-    .replace(/[-_]canvas$/i, "");
-
-  if (stem.includes("--")) {
-    const [artist, ...rest] = stem.split("--");
-    const track = rest.join("--").replace(/-/g, " ");
-    return `${artist.replace(/-/g, " ")} — ${track}`;
-  }
-  // Legacy / unstructured filename: just clean separators, leave case alone.
-  return stem.replace(/[-_]+/g, " ");
-}
-
-export async function Examples() {
-  const files = await listExamples();
-
+export function Examples() {
   return (
     <section id="examples" className="px-5 sm:px-8 py-16 sm:py-24">
       <div className="mx-auto max-w-6xl">
         <div className="text-center mb-10 sm:mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-            See it in motion.
+            See it on Spotify.
           </h2>
           <p className="mt-3 text-[var(--color-ink-dim)] max-w-xl mx-auto">
-            Real canvases generated with Canvas Buddy. All looping, all 9:16.
+            This is how your Canvas looks on the mobile player.
           </p>
         </div>
 
-        {files.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {files.map((file) => (
-              <ExampleTile key={file} file={file} />
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+          {PHONES.map((p) => (
+            <Phone key={p.title} {...p} />
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-function ExampleTile({ file }: { file: string }) {
+function Phone({ image, title, artist, effect }: PhoneConfig) {
   return (
-    <figure className="group relative">
-      <div className="relative aspect-[9/16] overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-border)]">
-        <video
-          src={`/examples/${encodeURIComponent(file)}`}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover"
+    <figure className="flex flex-col items-center gap-3">
+      <div
+        className="relative bg-black overflow-hidden"
+        style={{
+          width: "128px",
+          height: "254px",
+          borderRadius: "18px",
+          border: "2px solid #333",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={image}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
-        <figcaption className="absolute bottom-2 left-3 right-3 text-[11px] uppercase tracking-wider text-white/85 font-medium">
-          {labelFromFilename(file)}
-        </figcaption>
-      </div>
-    </figure>
-  );
-}
 
-function EmptyState() {
-  return (
-    <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)]/50 px-6 py-12 text-center">
-      <p className="text-[var(--color-ink)] font-medium">
-        No examples yet.
-      </p>
-      <p className="mt-2 text-sm text-[var(--color-ink-dim)] max-w-md mx-auto">
-        Drop any{" "}
-        <code className="text-[var(--color-accent)]">.mp4</code> or{" "}
-        <code className="text-[var(--color-accent)]">.webm</code> files into{" "}
-        <code className="text-[var(--color-accent)]">public/examples/</code>{" "}
-        and they'll appear here automatically.
-      </p>
-    </div>
+        {/* Readability gradient — dark at the bottom, fades upward */}
+        <div
+          className="absolute inset-x-0 bottom-0 pointer-events-none"
+          style={{
+            height: "40%",
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0) 100%)",
+          }}
+        />
+
+        {/* Top bar — down arrow / PLAYING FROM PLAYLIST / hamburger */}
+        <div className="absolute top-0 inset-x-0 flex items-center justify-between px-2.5 pt-2.5 text-white/85">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          <span className="text-[6px] font-semibold tracking-[0.12em] uppercase">
+            Playing from playlist
+          </span>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="4" y1="7" x2="20" y2="7" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="17" x2="20" y2="17" />
+          </svg>
+        </div>
+
+        {/* Bottom: title + artist + scrub + transport */}
+        <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 text-white">
+          <p className="font-bold leading-tight" style={{ fontSize: "10px" }}>
+            {title}
+          </p>
+          <p
+            className="leading-tight mt-0.5"
+            style={{ fontSize: "8px", color: "rgba(255,255,255,0.55)" }}
+          >
+            {artist}
+          </p>
+
+          {/* Progress bar — ~35% played */}
+          <div
+            className="mt-2 rounded-full overflow-hidden"
+            style={{ height: "2px", backgroundColor: "rgba(255,255,255,0.25)" }}
+          >
+            <div
+              className="h-full bg-white"
+              style={{ width: "35%" }}
+            />
+          </div>
+
+          {/* Transport: skip back / play / skip forward */}
+          <div className="mt-2 flex items-center justify-center gap-3 text-white">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="20 4 9 12 20 20 20 4" />
+              <rect x="5" y="4" width="2" height="16" />
+            </svg>
+            <span
+              className="rounded-full bg-white text-black flex items-center justify-center"
+              style={{ width: "18px", height: "18px" }}
+            >
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="6 4 20 12 6 20 6 4" />
+              </svg>
+            </span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="4 4 15 12 4 20 4 4" />
+              <rect x="17" y="4" width="2" height="16" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <figcaption className="text-[10px] uppercase tracking-wider text-[var(--color-ink-muted)] font-medium">
+        {effect}
+      </figcaption>
+    </figure>
   );
 }
