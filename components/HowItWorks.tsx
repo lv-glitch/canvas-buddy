@@ -4,18 +4,20 @@ const steps = [
     title: "Upload or generate",
     body:
       "Drop in album art or a photo, or describe what you want and let AI generate it.",
+    color: "var(--color-accent)",
   },
   {
     n: "02",
     title: "Pick effect + filter",
-    body:
-      "One subtle motion (zoom, drift, pulse, glitch, particles) plus a color filter. Done.",
+    body: "8 animations. 13 filters. Pick one of each — no learning curve.",
+    color: "var(--color-accent)",
   },
   {
     n: "03",
     title: "Download & upload",
     body:
       "Export a Spotify-spec MP4 and upload it through Spotify for Artists.",
+    color: "var(--color-purple)",
   },
 ];
 
@@ -33,12 +35,15 @@ export function HowItWorks() {
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
-          {steps.map(({ n, title, body }) => (
+          {steps.map(({ n, title, body, color }) => (
             <div
               key={n}
               className="rounded-[var(--radius-card)] bg-[var(--color-surface)] border border-[var(--color-border)] p-6 sm:p-7"
             >
-              <div className="text-sm font-mono text-[var(--color-accent)] tracking-widest">
+              <div
+                className="text-sm font-mono tracking-widest"
+                style={{ color }}
+              >
                 {n}
               </div>
               <h3 className="mt-3 text-xl font-bold tracking-tight">{title}</h3>

@@ -159,7 +159,8 @@ export function EffectPicker() {
             Pick a vibe.
           </h2>
           <p className="mt-3 text-[var(--color-ink-dim)] max-w-xl mx-auto">
-            Try it right here. One free canvas — see how fast it is.
+            Choose an animation effect and a color filter — try one free canvas
+            right here.
           </p>
         </div>
 
@@ -249,6 +250,7 @@ export function EffectPicker() {
                 onPick={onPickAnimation}
                 disabled={isLocked || isBusy || showResult}
                 labelFor={(v) => v[0].toUpperCase() + v.slice(1)}
+                accent="green"
               />
 
               <PillGroup
@@ -260,6 +262,7 @@ export function EffectPicker() {
                 labelFor={(v) =>
                   v === "none" ? "Original" : filterLabels[v] || v
                 }
+                accent="purple"
               />
 
               <div className="pt-2 mt-auto space-y-3">
@@ -302,6 +305,7 @@ function PillGroup({
   onPick,
   disabled,
   labelFor,
+  accent = "green",
 }: {
   title: string;
   values: string[];
@@ -309,7 +313,18 @@ function PillGroup({
   onPick: (v: string) => void;
   disabled: boolean;
   labelFor: (v: string) => string;
+  accent?: "green" | "purple";
 }) {
+  // Effect = green (full saturated bg + black text).
+  // Filter = purple (translucent bg + purple text — softer per spec).
+  const activeClasses =
+    accent === "purple"
+      ? "border-[var(--color-purple)]/40 text-[var(--color-purple)] font-semibold"
+      : "bg-[var(--color-accent)] border-[var(--color-accent)] text-black font-semibold";
+  const activeStyle =
+    accent === "purple"
+      ? { backgroundColor: "rgba(179,136,255,0.15)" }
+      : undefined;
   return (
     <div>
       <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)] mb-3">
@@ -324,10 +339,11 @@ function PillGroup({
               type="button"
               onClick={() => onPick(v)}
               disabled={disabled}
+              style={active ? activeStyle : undefined}
               className={[
                 "px-3.5 py-1.5 rounded-full text-sm border transition-colors",
                 active
-                  ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-black font-semibold"
+                  ? activeClasses
                   : "bg-[var(--color-surface-2)] border-[var(--color-border)] text-[var(--color-ink-dim)] hover:text-[var(--color-ink)] hover:border-[var(--color-ink-muted)]",
                 disabled && !active ? "opacity-50" : "",
                 disabled ? "cursor-not-allowed" : "",
