@@ -408,6 +408,19 @@ export default function CanvasBuddyApp() {
     }
   }
 
+  function renameCanvas(id: string, name: string) {
+    // Optimistic — flip locally now, fire the PATCH in the background. If
+    // the server rejects (validation, network blip), we'll revert via the
+    // catch — but for an 80-char text field that's so rare we keep it
+    // simple by ignoring; the next refresh will resync.
+    setCanvases((cs) => cs.map((c) => (c.id === id ? { ...c, name } : c)));
+    fetch(`/api/canvases/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }).catch(() => {});
+  }
+
   function deleteCanvas(id: string) {
     // Fire-and-forget DB delete — UI removes immediately for snappy feel.
     // If the API call fails (network blip), the row gets reaped on next
@@ -515,6 +528,7 @@ export default function CanvasBuddyApp() {
           canvases={canvases}
           plan={plan}
           selectedId={selectedCanvasId}
+          onRename={renameCanvas}
           onSelect={(c) => {
             setSelectedCanvasId(c.id);
             setResultURL(c.videoURL || null);

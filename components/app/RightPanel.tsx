@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 export interface SavedCanvas {
   id: string;
   name: string;
@@ -19,6 +21,7 @@ interface RightPanelProps {
   plan: "free" | "payg" | "pro";
   selectedId: string | null;
   onSelect: (c: SavedCanvas) => void;
+  onRename: (id: string, name: string) => void;
   onDownload: (c: SavedCanvas) => void;
   onDelete: (id: string) => void;
 }
@@ -28,6 +31,7 @@ export function RightPanel({
   plan,
   selectedId,
   onSelect,
+  onRename,
   onDownload,
   onDelete,
 }: RightPanelProps) {
@@ -58,20 +62,23 @@ export function RightPanel({
                   <button
                     type="button"
                     onClick={() => onSelect(c)}
-                    className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
+                    className="flex-shrink-0"
                     title="Load in preview"
                   >
                     <div
-                      className="w-10 h-10 rounded flex-shrink-0 bg-cover bg-center"
+                      className="w-10 h-10 rounded bg-cover bg-center"
                       style={{ backgroundImage: `url(${c.thumbnailURL})` }}
                     />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate">{c.name}</p>
-                      <p className="text-[10px] text-[var(--color-ink-muted)] truncate uppercase tracking-wider">
-                        {c.effect} · {c.filter}
-                      </p>
-                    </div>
                   </button>
+                  <div className="min-w-0 flex-1">
+                    <RenamableName
+                      name={c.name}
+                      onSave={(next) => onRename(c.id, next)}
+                    />
+                    <p className="text-[10px] text-[var(--color-ink-muted)] truncate uppercase tracking-wider">
+                      {c.effect} · {c.filter}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => onDownload(c)}
@@ -158,6 +165,63 @@ export function RightPanel({
         </Section>
       </div>
     </aside>
+  );
+}
+
+function RenamableName({
+  name,
+  onSave,
+}: {
+  name: string;
+  onSave: (next: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Keep draft in sync with parent updates while not editing.
+  useEffect(() => { if (!editing) setDraft(name); }, [name, editing]);
+
+  // Auto-focus and select on edit-mode entry — feels native.
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  function commit() {
+    const next = draft.trim();
+    setEditing(false);
+    if (next && next !== name) onSave(next);
+    else setDraft(name);
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") { setDraft(name); setEditing(false); }
+        }}
+        maxLength={80}
+        className="text-xs font-medium bg-transparent border-b border-[var(--color-ink-muted)] outline-none w-full"
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="text-xs font-medium truncate w-full text-left hover:text-[var(--color-accent)] transition-colors"
+      title="Click to rename"
+    >
+      {name}
+    </button>
   );
 }
 
