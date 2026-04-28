@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
 
 interface Plan {
   name: string;
@@ -6,7 +8,10 @@ interface Plan {
   cadence: string;
   features: string[];
   cta: string;
-  ctaHref: string;
+  /** "subscribe" → POST /api/checkout?tier=pro and redirect to the URL.
+   *  "buy"        → per-canvas one-off (Phase B, not yet wired).
+   *  "signup"     → just go to /sign-up. */
+  action: "signup" | "subscribe" | "buy";
   highlight?: "purple" | "green";
   badge?: string;
   tagline?: string;
@@ -25,7 +30,7 @@ const plans: Plan[] = [
       "Canvas Buddy watermark",
     ],
     cta: "Start for free",
-    ctaHref: "#",
+    action: "signup",
   },
   {
     name: "Per Canvas",
@@ -39,7 +44,7 @@ const plans: Plan[] = [
       "No subscription",
     ],
     cta: "Buy a canvas",
-    ctaHref: "#",
+    action: "buy",
     highlight: "purple",
   },
   {
@@ -55,7 +60,7 @@ const plans: Plan[] = [
       "Priority rendering",
     ],
     cta: "Go Pro",
-    ctaHref: "#",
+    action: "subscribe",
     highlight: "green",
     badge: "Best value",
   },
@@ -95,6 +100,43 @@ export function Pricing() {
 function PlanCard({ plan }: { plan: Plan }) {
   const isGreen = plan.highlight === "green";
   const isPurple = plan.highlight === "purple";
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onClick() {
+    if (plan.action === "signup") {
+      window.location.href = "/sign-up";
+      return;
+    }
+    if (plan.action === "buy") {
+      // Per-canvas $4.99 buys a single watermark-removal — gated on a canvas
+      // existing first. Redirect to /app where the per-canvas CTA on each
+      // library row can wire to Stripe Checkout (Phase B).
+      window.location.href = "/sign-up?next=buy";
+      return;
+    }
+    // Pro subscription via Stripe Checkout.
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tier: "pro" }),
+      });
+      if (r.status === 401) {
+        // Not signed in yet — bounce through sign-up, come back here.
+        window.location.href = "/sign-up?next=pro";
+        return;
+      }
+      const data = await r.json();
+      if (!r.ok || !data.url) throw new Error(data.error || "Checkout failed.");
+      window.location.href = data.url;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  }
 
   const wrapperClasses = [
     "relative rounded-[var(--radius-card)] bg-[var(--color-surface)] p-7 sm:p-9 flex flex-col",
@@ -156,15 +198,20 @@ function PlanCard({ plan }: { plan: Plan }) {
         ))}
       </ul>
 
-      <Link
-        href={plan.ctaHref}
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={busy}
         className={[
-          "mt-8 inline-flex items-center justify-center rounded-[var(--radius-pill)] px-5 py-3 text-sm font-semibold transition-colors",
+          "mt-8 inline-flex items-center justify-center rounded-[var(--radius-pill)] px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed",
           ctaClasses,
         ].join(" ")}
       >
-        {plan.cta}
-      </Link>
+        {busy ? "Loading…" : plan.cta}
+      </button>
+      {err && (
+        <p className="mt-2 text-[11px] text-[#ff6b6b] leading-snug">{err}</p>
+      )}
     </div>
   );
 }
