@@ -7,6 +7,7 @@ import { CenterPanel } from "@/components/app/CenterPanel";
 import { RightPanel, type SavedCanvas } from "@/components/app/RightPanel";
 import { DownloadModal } from "@/components/app/DownloadModal";
 import { SettingsModal } from "@/components/app/SettingsModal";
+import { loadPendingCanvas, clearPendingCanvas } from "@/lib/pendingCanvas";
 
 // Mirror the actual tool's animations and filters so what you pick here maps
 // 1:1 to what FFmpeg renders on the backend.
@@ -130,6 +131,78 @@ export default function CanvasBuddyApp() {
       }
     }
     void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  // After signup, the marketing-site demo render lives in IndexedDB. Pull it
+  // out, persist it to the library (so it survives refresh), drop it into
+  // the center preview, and clear the pending entry. One-shot.
+  useEffect(() => {
+    let cancelled = false;
+    async function hydratePending() {
+      const pending = await loadPendingCanvas();
+      if (cancelled || !pending) return;
+
+      // Hydrate the controls so the preview reads correctly.
+      setEffect(pending.effect);
+      setFilter(pending.filter);
+      setDuration(pending.duration);
+
+      // Show it immediately as a local blob URL — the upload happens behind
+      // the scenes and we'll swap to the signed URL once it lands.
+      const sourceFileLocal = new File([pending.sourceBlob], pending.sourceName, {
+        type: pending.sourceType,
+      });
+      const localSourceURL = URL.createObjectURL(pending.sourceBlob);
+      const localVideoURL = URL.createObjectURL(pending.videoBlob);
+      setSourceFile(sourceFileLocal);
+      setSourceURL(localSourceURL);
+      setResultURL(localVideoURL);
+
+      // Persist as the user's first library entry so it survives refresh.
+      try {
+        const fd = new FormData();
+        fd.append(
+          "metadata",
+          JSON.stringify({
+            name: "Welcome canvas",
+            animation: pending.effect,
+            filter: pending.filter,
+            duration: pending.duration,
+            status: "done",
+          })
+        );
+        fd.append("video", new File([pending.videoBlob], "canvas.mp4", { type: "video/mp4" }));
+        fd.append(
+          "thumbnail",
+          new File(
+            [pending.sourceBlob],
+            "thumb." + (pending.sourceType === "image/png" ? "png" : "jpg"),
+            { type: pending.sourceType || "image/jpeg" }
+          )
+        );
+        const r = await fetch("/api/canvases", { method: "POST", body: fd });
+        if (!cancelled && r.ok) {
+          const { canvas } = await r.json();
+          const next: SavedCanvas = {
+            id: canvas.id,
+            name: canvas.name,
+            effect: labelFor(EFFECTS, canvas.animation),
+            filter: labelFor(FILTERS, canvas.filter),
+            duration: canvas.duration,
+            thumbnailURL: canvas.thumbnailURL || localSourceURL,
+            videoURL: canvas.videoURL || localVideoURL,
+          };
+          setCanvases((cs) => [next, ...cs]);
+          setSelectedCanvasId(canvas.id);
+          if (canvas.videoURL) setResultURL(canvas.videoURL);
+          setVideosUsed((n) => n + 1);
+        }
+      } catch { /* keep the local blob URLs; row will be missing but preview works */ }
+
+      await clearPendingCanvas();
+    }
+    void hydratePending();
     return () => { cancelled = true; };
   }, []);
 

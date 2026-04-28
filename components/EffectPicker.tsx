@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { savePendingCanvas } from "@/lib/pendingCanvas";
 
 // Where the canvas-maker tool lives. In dev that's localhost:3737. For a real
 // deploy, set NEXT_PUBLIC_TOOL_API at build time to the public URL.
@@ -152,6 +153,21 @@ export function EffectPicker({ externalFile }: EffectPickerProps = {}) {
       setResultURL(url);
       // Mark the demo as used. Free tier locks after one canvas.
       try { localStorage.setItem(USED_KEY, String(Date.now())); } catch {}
+      // Hand the rendered MP4 + source + settings off to /app via IndexedDB,
+      // so a fresh signup lands in the editor with their canvas in the
+      // preview, ready to download once they pick a plan.
+      try {
+        await savePendingCanvas({
+          videoBlob: blob,
+          sourceBlob: photoFile,
+          sourceName: photoFile.name,
+          sourceType: photoFile.type || "image/jpeg",
+          effect: animation,
+          filter,
+          duration: Number(DEMO_DURATION),
+          savedAt: Date.now(),
+        });
+      } catch { /* ignore — demo still works without the hand-off */ }
       setStatus("done");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -379,13 +395,13 @@ function DoneCTA() {
         That&rsquo;s your free canvas.
       </p>
       <p className="text-xs text-[var(--color-ink-dim)] mt-1">
-        Sign up to download, render unlimited canvases, and skip the watermark.
+        Sign up to download it watermark-free and render unlimited more.
       </p>
       <Link
-        href="#pricing"
+        href="/sign-up"
         className="mt-3 inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-accent)] px-5 py-2.5 text-sm font-semibold text-black hover:bg-[var(--color-accent-hover)] transition-colors"
       >
-        See plans
+        Sign up &amp; download
       </Link>
     </div>
   );
