@@ -13,6 +13,8 @@ export interface SavedCanvas {
 interface RightPanelProps {
   canvases: SavedCanvas[];
   plan: "free" | "payg" | "pro";
+  selectedId: string | null;
+  onSelect: (c: SavedCanvas) => void;
   onDownload: (c: SavedCanvas) => void;
   onDelete: (id: string) => void;
 }
@@ -20,6 +22,8 @@ interface RightPanelProps {
 export function RightPanel({
   canvases,
   plan,
+  selectedId,
+  onSelect,
   onDownload,
   onDelete,
 }: RightPanelProps) {
@@ -35,21 +39,35 @@ export function RightPanel({
             </p>
           ) : (
             <ul className="space-y-2">
-              {canvases.map((c) => (
+              {canvases.map((c) => {
+                const isSelected = c.id === selectedId;
+                return (
                 <li
                   key={c.id}
-                  className="flex items-center gap-2.5 p-2 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-ink-muted)] transition-colors group"
+                  className={[
+                    "flex items-center gap-2.5 p-2 rounded-md bg-[var(--color-surface)] border transition-colors group",
+                    isSelected
+                      ? "border-[var(--color-accent)]"
+                      : "border-[var(--color-border)] hover:border-[var(--color-ink-muted)]",
+                  ].join(" ")}
                 >
-                  <div
-                    className="w-10 h-10 rounded flex-shrink-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${c.thumbnailURL})` }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{c.name}</p>
-                    <p className="text-[10px] text-[var(--color-ink-muted)] truncate uppercase tracking-wider">
-                      {c.effect} · {c.filter}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(c)}
+                    className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
+                    title="Load in preview"
+                  >
+                    <div
+                      className="w-10 h-10 rounded flex-shrink-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${c.thumbnailURL})` }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium truncate">{c.name}</p>
+                      <p className="text-[10px] text-[var(--color-ink-muted)] truncate uppercase tracking-wider">
+                        {c.effect} · {c.filter}
+                      </p>
+                    </div>
+                  </button>
                   <button
                     type="button"
                     onClick={() => onDownload(c)}
@@ -79,7 +97,8 @@ export function RightPanel({
                     </svg>
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </Section>

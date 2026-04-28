@@ -70,6 +70,7 @@ export default function CanvasBuddyApp() {
   const [renderError, setRenderError] = useState<string | null>(null);
   const [resultURL, setResultURL] = useState<string | null>(null);
   const [canvases, setCanvases] = useState<SavedCanvas[]>([]);
+  const [selectedCanvasId, setSelectedCanvasId] = useState<string | null>(null);
 
   // Modals
   const [downloadModalFor, setDownloadModalFor] = useState<SavedCanvas | null>(null);
@@ -250,6 +251,7 @@ export default function CanvasBuddyApp() {
       };
       setCanvases((cs) => [next, ...cs]);
       setResultURL(videoURL);
+      setSelectedCanvasId(canvasId);
       setVideosUsed((n) => n + 1);
     } catch (e) {
       setRenderError(e instanceof Error ? e.message : String(e));
@@ -313,6 +315,11 @@ export default function CanvasBuddyApp() {
     // If the canvas we just deleted was the one displayed in the center
     // preview, clear that view too.
     setDownloadModalFor((cur) => (cur && cur.id === id ? null : cur));
+    setSelectedCanvasId((cur) => (cur === id ? null : cur));
+    setResultURL((cur) => {
+      const target = canvases.find((c) => c.id === id);
+      return target && cur === target.videoURL ? null : cur;
+    });
   }
 
   return (
@@ -365,6 +372,19 @@ export default function CanvasBuddyApp() {
         <RightPanel
           canvases={canvases}
           plan={plan}
+          selectedId={selectedCanvasId}
+          onSelect={(c) => {
+            setSelectedCanvasId(c.id);
+            setResultURL(c.videoURL || null);
+            // Match the controls to the saved canvas so the spec readout
+            // under the preview is accurate. effect/filter come back as
+            // labels from the GET, but the controls expect canonical values.
+            const eff = EFFECTS.find((e) => e.label === c.effect);
+            const flt = FILTERS.find((f) => f.label === c.filter);
+            if (eff) setEffect(eff.value);
+            if (flt) setFilter(flt.value);
+            setDuration(c.duration);
+          }}
           onDownload={downloadFromList}
           onDelete={deleteCanvas}
         />
