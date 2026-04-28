@@ -608,12 +608,28 @@ function labelFor(items: OptionItem[], value: string): string {
   return items.find((i) => i.value === value)?.label ?? value;
 }
 
-function triggerDownload(url: string, filename: string) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+async function triggerDownload(url: string, filename: string) {
+  // Cross-origin URLs (Supabase signed URLs) ignore the <a download>
+  // attribute — browsers just navigate to the file. Fetch the bytes,
+  // wrap in a blob URL on our origin, then trigger the anchor download.
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const blob = await r.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoke after the click has had time to start the download. Without
+    // a tiny delay the URL gets revoked before the browser dispatches.
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch (err) {
+    // Fallback: open in a new tab so the user can save manually.
+    console.warn(`[download] blob fetch failed: ${err instanceof Error ? err.message : err}`);
+    window.open(url, "_blank");
+  }
 }
 
