@@ -3,12 +3,16 @@ import { NextResponse } from "next/server";
 
 const isAppRoute = createRouteMatcher(["/app(.*)"]);
 const isProtectedApi = createRouteMatcher(["/api/canvases(.*)", "/api/me(.*)"]);
+// Public diagnostic endpoint that reveals only paid/status booleans —
+// safe to expose unauthenticated for now. Subset must match BEFORE the
+// broader /api/canvases gate so it's reachable.
+const isPublicProbe = createRouteMatcher(["/api/canvases/:id/probe"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
 
-  // API routes — JSON 401 for unauthenticated callers.
-  if (isProtectedApi(req) && !userId) {
+  // API routes — JSON 401 for unauthenticated callers, except the probe.
+  if (isProtectedApi(req) && !isPublicProbe(req) && !userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
