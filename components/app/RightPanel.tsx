@@ -12,7 +12,7 @@ export interface SavedCanvas {
 
 interface RightPanelProps {
   canvases: SavedCanvas[];
-  plan: "free" | "percanvas" | "pro";
+  plan: "free" | "payg" | "pro";
   onDownload: (c: SavedCanvas) => void;
   onDelete: (id: string) => void;
 }

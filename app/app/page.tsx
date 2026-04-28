@@ -37,7 +37,7 @@ const FILTERS: OptionItem[] = [
   { value: "shimmer",    label: "Shimmer" },
 ];
 
-type Plan = "free" | "percanvas" | "pro";
+type Plan = "free" | "payg" | "pro";
 
 // Where the FFmpeg + Flux backend lives. Override with NEXT_PUBLIC_TOOL_API
 // for staging/prod; defaults to the local canvas-maker on port 3737.
@@ -45,10 +45,11 @@ const TOOL_API =
   process.env.NEXT_PUBLIC_TOOL_API || "http://localhost:3737";
 
 export default function CanvasBuddyApp() {
-  // Plan + quota — hardcoded for now. Real billing wires in later.
-  const [plan] = useState<Plan>("free");
+  // Plan + quota come from the database (via /api/me). Set on mount.
+  const [plan, setPlan] = useState<Plan>("free");
+  const [videosUsed, setVideosUsed] = useState<number>(0);
+  const [videosLimit, setVideosLimit] = useState<number | null>(5);
   const [aiGenerationsLeft, setAIGenerationsLeft] = useState<number>(5);
-  const VIDEOS_LIMIT = 5;
 
   // Source image — keep both the File (needed for multipart upload to the
   // backend) and a blob URL (for the live preview img tag).
@@ -81,6 +82,55 @@ export default function CanvasBuddyApp() {
       for (const c of canvases) URL.revokeObjectURL(c.thumbnailURL);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load user info + saved canvases on mount. Replaces the hardcoded quotas
+  // and the in-memory canvases array with DB-backed state.
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [meRes, listRes] = await Promise.all([
+          fetch("/api/me"),
+          fetch("/api/canvases"),
+        ]);
+        if (!cancelled && meRes.ok) {
+          const { user, quota } = await meRes.json();
+          setPlan(user.plan);
+          setVideosUsed(user.videosUsed);
+          setVideosLimit(quota.videosLimit);
+          setAIGenerationsLeft(
+            quota.aiGenerationsRemaining === -1 ? Infinity : quota.aiGenerationsRemaining
+          );
+        }
+        if (!cancelled && listRes.ok) {
+          const { canvases: rows } = await listRes.json();
+          // Map DB rows to the SavedCanvas shape the UI components already expect.
+          // For now, output_storage_key + thumbnail_storage_key are placeholders
+          // (we'll wire Supabase Storage in the next step). Until then, the
+          // library row is metadata-only — re-render to recreate the MP4.
+          setCanvases(
+            (rows as Array<{
+              id: string; name: string; animation: string; filter: string;
+              duration: number; output_storage_key: string | null;
+              thumbnail_storage_key: string | null;
+            }>).map((r) => ({
+              id: r.id,
+              name: r.name,
+              effect: r.animation,
+              filter: r.filter,
+              duration: r.duration,
+              thumbnailURL: r.thumbnail_storage_key || "",
+              videoURL: r.output_storage_key || "",
+            }))
+          );
+        }
+      } catch {
+        /* offline / not authed — keep defaults */
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
   }, []);
 
   function pickFile(file: File) {
@@ -128,7 +178,10 @@ export default function CanvasBuddyApp() {
   // Real canvas generation — uploads source to /api/generate, gets MP4 back.
   async function generate() {
     if (!sourceFile || isGenerating) return;
-    if (canvases.length >= VIDEOS_LIMIT && plan === "free") return;
+    if (videosLimit !== null && videosUsed >= videosLimit) {
+      setRenderError("You've used all your videos this period. Upgrade to keep going.");
+      return;
+    }
 
     setIsGenerating(true);
     setRenderError(null);
@@ -149,8 +202,31 @@ export default function CanvasBuddyApp() {
       }
       const blob = await r.blob();
       const videoURL = URL.createObjectURL(blob);
+
+      // Persist metadata to the DB so the library survives refresh.
+      // (Phase 2: also upload the MP4 + thumbnail to Supabase Storage so
+      // the *content* survives refresh, not just the metadata.)
+      let canvasId = String(Date.now());
+      try {
+        const saveRes = await fetch("/api/canvases", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: `Canvas ${canvases.length + 1}`,
+            animation: effect,
+            filter,
+            duration,
+            status: "done",
+          }),
+        });
+        if (saveRes.ok) {
+          const { canvas } = await saveRes.json();
+          canvasId = canvas.id;
+        }
+      } catch { /* save failure is non-fatal — user still sees the result */ }
+
       const next: SavedCanvas = {
-        id: String(Date.now()),
+        id: canvasId,
         name: `Canvas ${canvases.length + 1}`,
         effect: labelFor(EFFECTS, effect),
         filter: labelFor(FILTERS, filter),
@@ -160,6 +236,7 @@ export default function CanvasBuddyApp() {
       };
       setCanvases((cs) => [next, ...cs]);
       setResultURL(videoURL);
+      setVideosUsed((n) => n + 1);
     } catch (e) {
       setRenderError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -177,7 +254,7 @@ export default function CanvasBuddyApp() {
 
   function downloadCurrent() {
     if (!resultURL) return;
-    if (plan === "pro" || plan === "percanvas") {
+    if (plan === "pro" || plan === "payg") {
       triggerDownload(resultURL, "canvas.mp4");
     } else {
       // Free: choose between watermarked free vs. $4.99 clean
@@ -187,7 +264,7 @@ export default function CanvasBuddyApp() {
   }
 
   function downloadFromList(c: SavedCanvas) {
-    if (plan === "pro" || plan === "percanvas") {
+    if (plan === "pro" || plan === "payg") {
       triggerDownload(c.videoURL, `${c.name}.mp4`);
     } else {
       setDownloadModalFor(c);
@@ -195,6 +272,11 @@ export default function CanvasBuddyApp() {
   }
 
   function deleteCanvas(id: string) {
+    // Fire-and-forget DB delete — UI removes immediately for snappy feel.
+    // If the API call fails (network blip), the row gets reaped on next
+    // refresh. Worst case: zombie row stays until user manually deletes again.
+    fetch(`/api/canvases/${id}`, { method: "DELETE" }).catch(() => {});
+
     setCanvases((cs) => {
       const target = cs.find((c) => c.id === id);
       // The thumbnail and video URLs are blob URLs created via
@@ -222,8 +304,8 @@ export default function CanvasBuddyApp() {
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg)]">
       <TopNav
-        videosUsed={canvases.length}
-        videosLimit={VIDEOS_LIMIT}
+        videosUsed={videosUsed}
+        videosLimit={videosLimit}
         plan={plan}
         onOpenSettings={() => setSettingsOpen(true)}
       />

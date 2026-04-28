@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,8 +34,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+    <ClerkProvider
+      // Match the rest of the app — Clerk's hosted modals inherit our brand tokens.
+      appearance={{
+        variables: {
+          colorPrimary: "#1ED760",
+          colorBackground: "#1a1a1a",
+          colorText: "#ffffff",
+          colorTextSecondary: "#b3b3b3",
+          colorInputBackground: "#232323",
+          colorInputText: "#ffffff",
+          borderRadius: "0.5rem",
+        },
+      }}
+    >
+      <html lang="en" className={`${inter.variable} h-full antialiased`}>
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

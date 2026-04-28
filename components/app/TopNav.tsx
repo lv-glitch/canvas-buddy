@@ -1,21 +1,26 @@
+"use client";
+
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 import { Logo } from "@/components/Logo";
 
 interface TopNavProps {
   videosUsed: number;
-  videosLimit: number;
-  plan: "free" | "percanvas" | "pro";
+  videosLimit: number | null;            // null = unlimited (pro)
+  plan: "free" | "payg" | "pro";
   onOpenSettings: () => void;
 }
 
 export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNavProps) {
-  const remaining = Math.max(0, videosLimit - videosUsed);
   const planLabel =
-    plan === "pro" ? "Pro" : plan === "percanvas" ? "Per Canvas" : "Free plan";
-  const status =
-    plan === "pro"
-      ? "Pro · unlimited"
-      : `${planLabel} — ${remaining} of ${videosLimit} videos remaining`;
+    plan === "pro" ? "Pro" : plan === "payg" ? "Per Canvas" : "Free plan";
+  let status: string;
+  if (plan === "pro" || videosLimit === null) {
+    status = `${planLabel} · unlimited`;
+  } else {
+    const remaining = Math.max(0, videosLimit - videosUsed);
+    status = `${planLabel} — ${remaining} of ${videosLimit} videos remaining`;
+  }
 
   return (
     <header className="h-14 bg-[#0a0a0a] border-b border-[var(--color-border)] flex items-center px-4 sm:px-6 flex-shrink-0">
@@ -52,13 +57,13 @@ export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNav
         </svg>
       </button>
 
-      <button
-        type="button"
-        className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-accent)] flex items-center justify-center text-xs font-semibold text-black"
-        aria-label="Account menu"
-      >
-        L
-      </button>
+      <UserButton
+        appearance={{
+          elements: {
+            avatarBox: "w-8 h-8",
+          },
+        }}
+      />
     </header>
   );
 }

@@ -10,6 +10,12 @@ primary_region = "sjc"
   # Edit this if the backend URL changes (or override at deploy with --build-arg).
   [build.args]
     NEXT_PUBLIC_TOOL_API = "https://api.canvasbuddy.io"
+    NEXT_PUBLIC_SUPABASE_URL = "https://djibkmgjhrmymstfvlha.supabase.co"
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_YWNjZXB0ZWQtbW9yYXktNDguY2xlcmsuYWNjb3VudHMuZGV2JA"
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL = "/sign-in"
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL = "/sign-up"
+    NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL = "/app"
+    NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL = "/app"
 
 [env]
   PORT = "3030"
