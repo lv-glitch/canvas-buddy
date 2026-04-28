@@ -72,7 +72,9 @@ export async function POST(req: Request) {
       subscription_data: { metadata: { clerk_user_id: userId } },
       success_url: `${origin}/app?checkout=success`,
       cancel_url: `${origin}/app?checkout=cancelled`,
-      automatic_tax: { enabled: true },
+      // Stripe Tax requires a complete head-office address + tax registrations.
+      // Opt in via STRIPE_TAX_ENABLED=true once that's all configured.
+      automatic_tax: { enabled: process.env.STRIPE_TAX_ENABLED === "true" },
       allow_promotion_codes: true,
     });
   } catch (err) {

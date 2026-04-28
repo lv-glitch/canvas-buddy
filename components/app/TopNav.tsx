@@ -29,8 +29,13 @@ export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNav
       if (!r.ok || !data.url) throw new Error(data.error || "Checkout failed.");
       window.location.href = data.url;
     } catch (e) {
-      setBillingErr(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setBillingErr(msg);
       setBillingBusy(false);
+      // The button silent-failing felt like a dead click. Surface the actual
+      // Stripe error so the user (or me reading their screenshot) knows
+      // what's wrong instead of guessing.
+      alert(`Couldn't start Stripe Checkout:\n\n${msg}`);
     }
   }
 
@@ -43,8 +48,10 @@ export function TopNav({ videosUsed, videosLimit, plan, onOpenSettings }: TopNav
       if (!r.ok || !data.url) throw new Error(data.error || "Portal failed.");
       window.location.href = data.url;
     } catch (e) {
-      setBillingErr(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setBillingErr(msg);
       setBillingBusy(false);
+      alert(`Couldn't open Customer Portal:\n\n${msg}`);
     }
   }
 
