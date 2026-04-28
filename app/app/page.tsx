@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { TopNav } from "@/components/app/TopNav";
 import { LeftPanel, type OptionItem } from "@/components/app/LeftPanel";
 import { CenterPanel } from "@/components/app/CenterPanel";
@@ -78,24 +77,24 @@ export default function CanvasBuddyApp() {
   const [downloadModalFor, setDownloadModalFor] = useState<SavedCanvas | null>(null);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
-  // Banner shown briefly after Stripe Checkout returns successfully. Reads
-  // ?checkout=success on first paint, then strips the param so refresh
-  // doesn't show it again.
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  // Banner shown briefly after Stripe Checkout returns. Reads ?checkout=
+  // straight off window.location on mount (avoids the useSearchParams
+  // Suspense requirement that breaks static prerender), then strips the
+  // param via history.replaceState so refresh doesn't keep it around.
   const [checkoutBanner, setCheckoutBanner] = useState<"success" | "cancelled" | null>(null);
   useEffect(() => {
-    const status = searchParams.get("checkout");
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("checkout");
     if (status === "success" || status === "cancelled") {
       setCheckoutBanner(status as "success" | "cancelled");
-      router.replace("/app");
-      // Auto-dismiss success banner after 8s — failure stays until clicked.
+      const url = new URL(window.location.href);
+      url.searchParams.delete("checkout");
+      window.history.replaceState({}, "", url.toString());
       if (status === "success") {
         const t = setTimeout(() => setCheckoutBanner(null), 8000);
         return () => clearTimeout(t);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cleanup all object URLs on unmount.
