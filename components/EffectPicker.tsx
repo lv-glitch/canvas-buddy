@@ -27,7 +27,14 @@ interface AnimationMeta {
   description: string;
 }
 
-export function EffectPicker() {
+interface EffectPickerProps {
+  /** When set, this file is loaded into the demo (replacing whatever was
+   *  picked locally). Used to wire the upstream "Start with a photo or idea"
+   *  cards into this section. */
+  externalFile?: File | null;
+}
+
+export function EffectPicker({ externalFile }: EffectPickerProps = {}) {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -83,6 +90,13 @@ export function EffectPicker() {
     setPhotoURL(URL.createObjectURL(f));
     void renderPreview(f, filter);
   }
+
+  // When the parent passes a new externalFile (drag-drop or AI gen from the
+  // Start-with-a-photo cards), load it into the demo here.
+  useEffect(() => {
+    if (externalFile) onPickFile(externalFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalFile]);
 
   // Apply the current filter to a still preview so they see the look before
   // committing to the full canvas render.
@@ -152,7 +166,7 @@ export function EffectPicker() {
   const previewSource = previewURL || photoURL;
 
   return (
-    <section className="px-5 sm:px-8 py-16 sm:py-24 bg-[var(--color-surface)]/30">
+    <section id="vibe" className="px-5 sm:px-8 py-16 sm:py-24 bg-[var(--color-surface)]/30">
       <div className="mx-auto max-w-6xl">
         <div className="text-center mb-10 sm:mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
