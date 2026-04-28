@@ -52,9 +52,8 @@ export function TopNav({
     setBillingBusy(true);
     setBillingErr(null);
     try {
-      // Use the cancel-flow specifically so Stripe auto-redirects back to
-      // /app after the user confirms. The general portal doesn't support
-      // post-action redirects, leaving users stranded on a Stripe page.
+      // Cancel flow if the sub is still cancellable; /api/portal falls back
+      // to the general portal otherwise (already-cancelled, reactivating, etc).
       const r = await fetch("/api/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,8 +61,12 @@ export function TopNav({
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data.url) throw new Error(data.error || "Portal failed.");
-      // Same tab — the portal will redirect back to /app on completion.
-      window.location.href = data.url;
+      // New tab — Stripe's general portal doesn't auto-redirect after an
+      // action, so closing the Stripe tab is the most reliable way back.
+      // /app refetches /api/me on visibilitychange so the new state shows
+      // up the moment the user returns.
+      window.open(data.url, "_blank", "noopener,noreferrer");
+      setBillingBusy(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setBillingErr(msg);
