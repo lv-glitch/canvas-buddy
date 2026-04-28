@@ -60,19 +60,28 @@ export async function POST(req: Request) {
   }
 
   const origin = siteOrigin(req);
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [{ price: STRIPE_PRICE_IDS.pro, quantity: 1 }],
-    // metadata flows to the webhook so we can match the subscription back to
-    // the Clerk user without relying on the customer email.
-    metadata: { clerk_user_id: userId },
-    subscription_data: { metadata: { clerk_user_id: userId } },
-    success_url: `${origin}/app?checkout=success`,
-    cancel_url: `${origin}/app?checkout=cancelled`,
-    automatic_tax: { enabled: true },
-    allow_promotion_codes: true,
-  });
+  let session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customerId,
+      line_items: [{ price: STRIPE_PRICE_IDS.pro, quantity: 1 }],
+      // metadata flows to the webhook so we can match the subscription back
+      // to the Clerk user without relying on the customer email.
+      metadata: { clerk_user_id: userId },
+      subscription_data: { metadata: { clerk_user_id: userId } },
+      success_url: `${origin}/app?checkout=success`,
+      cancel_url: `${origin}/app?checkout=cancelled`,
+      automatic_tax: { enabled: true },
+      allow_promotion_codes: true,
+    });
+  } catch (err) {
+    // Surface Stripe's error message to the client so we don't 500 with an
+    // empty body. (Common cause: missing head-office address in tax settings.)
+    const msg = err instanceof Error ? err.message : "Stripe API call failed.";
+    console.error("[checkout] stripe error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   if (!session.url) {
     return NextResponse.json({ error: "Stripe did not return a checkout URL." }, { status: 500 });
