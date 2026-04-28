@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getSupabase } from "@/lib/supabase";
 import { rerenderCanvasClean } from "@/lib/rerender";
+import { sendEmail, welcomeToProEmail, watermarkRemovedEmail } from "@/lib/email";
 
 /** POST /api/stripe/webhook — Stripe webhook handler.
  *
@@ -65,6 +66,12 @@ export async function POST(req: Request) {
               stripe_customer_id: (session.customer as string) ?? undefined,
             })
             .eq("id", userId);
+          // Welcome email — fire-and-forget; failures must not break the webhook.
+          const { data: u } = await supabase.from("users").select("email").eq("id", userId).single();
+          if (u?.email) {
+            const tmpl = welcomeToProEmail();
+            void sendEmail({ to: u.email, subject: tmpl.subject, html: tmpl.html });
+          }
         }
 
         if (userId && canvasId && session.mode === "payment") {
@@ -85,6 +92,15 @@ export async function POST(req: Request) {
             .eq("user_id", userId);
           try {
             await rerenderCanvasClean(canvasId);
+            // Confirmation email — fetch user email + canvas name for personalisation.
+            const [{ data: u }, { data: c }] = await Promise.all([
+              supabase.from("users").select("email").eq("id", userId).single(),
+              supabase.from("canvases").select("name").eq("id", canvasId).single(),
+            ]);
+            if (u?.email) {
+              const tmpl = watermarkRemovedEmail(c?.name || "Your canvas");
+              void sendEmail({ to: u.email, subject: tmpl.subject, html: tmpl.html });
+            }
           } catch (err) {
             // If the re-render fails, leave paid_one_off_id set (the user
             // paid) but mark the row failed so we can retry/refund. They
