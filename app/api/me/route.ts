@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { getOrCreateCurrentUser, QUOTAS } from "@/lib/users";
+import { getOrCreateCurrentUser, backfillWelcomeEmailIfNeeded, QUOTAS } from "@/lib/users";
 
 /** GET /api/me — return the current user with computed quota state.
  *  Used by the app's TopNav to show "X of Y videos remaining". */
@@ -8,8 +8,11 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const user = await getOrCreateCurrentUser();
+  let user = await getOrCreateCurrentUser();
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  // If signup-time Clerk email was missing, backfill it now that the
+  // verified email is available — fires the welcome on the catch-up.
+  user = await backfillWelcomeEmailIfNeeded(user);
 
   const limit = QUOTAS[user.plan];
   const videosRemaining = limit.videos === Infinity ? -1

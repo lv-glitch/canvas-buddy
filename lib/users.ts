@@ -52,14 +52,39 @@ export async function getOrCreateCurrentUser(): Promise<UserRow | null> {
   }
 
   // Brand-new user — fire the welcome email. Fire-and-forget; failures
-  // never break signup. Only fire when we have an email; users without
-  // a primary email (rare, but possible if Clerk is mid-signup) get
-  // the welcome on the next /api/me hit when their email exists.
+  // never break signup.
   if (email) {
+    console.log(`[welcome] sending to ${email} for user ${userId}`);
     const tmpl = welcomeNewUserEmail();
     void sendEmail({ to: email, subject: tmpl.subject, html: tmpl.html });
+  } else {
+    console.log(`[welcome] skipped — no email yet for user ${userId}`);
   }
   return inserted as UserRow;
+}
+
+/** Backfill helper: patch a user's email if it was missing at first
+ *  signup, and fire the welcome email then. Called by /api/me on every
+ *  hit so a freshly-signed-up user picks up their welcome the moment
+ *  Clerk's primary email becomes available. */
+export async function backfillWelcomeEmailIfNeeded(
+  user: UserRow
+): Promise<UserRow> {
+  if (user.email) return user;
+  const clerkUser = await currentUser();
+  const email =
+    clerkUser?.primaryEmailAddress?.emailAddress ||
+    clerkUser?.emailAddresses?.[0]?.emailAddress ||
+    "";
+  if (!email) return user;
+
+  console.log(`[welcome] backfilling email for ${user.id} → ${email}`);
+  const sb = getSupabase();
+  const { data: updated } = await sb
+    .from("users").update({ email }).eq("id", user.id).select().single();
+  const tmpl = welcomeNewUserEmail();
+  void sendEmail({ to: email, subject: tmpl.subject, html: tmpl.html });
+  return (updated as UserRow) || { ...user, email };
 }
 
 export const QUOTAS = {
