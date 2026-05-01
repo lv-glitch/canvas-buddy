@@ -106,12 +106,20 @@ export default function CanvasBuddyApp() {
     | "checkout-cancelled"
     | "unlock-success"
     | "unlock-cancelled"
+    | "unlock-downloaded"
     | null;
   const [checkoutBanner, setCheckoutBanner] = useState<Banner>(null);
+  // Set when we land on /app?unlock=success&canvas=<id> after Stripe Checkout
+  // for the per-canvas $4.99 unlock. The polling effect below watches this
+  // and auto-downloads the clean MP4 the moment the webhook finishes its
+  // re-render, so non-technical users don't have to find the canvas in the
+  // library and click download themselves.
+  const [pendingUnlockCanvasId, setPendingUnlockCanvasId] = useState<string | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkout = params.get("checkout");
     const unlock = params.get("unlock");
+    const canvasId = params.get("canvas");
     let banner: Banner = null;
     if (checkout === "success") banner = "checkout-success";
     else if (checkout === "cancelled") banner = "checkout-cancelled";
@@ -119,17 +127,94 @@ export default function CanvasBuddyApp() {
     else if (unlock === "cancelled") banner = "unlock-cancelled";
     if (banner) {
       setCheckoutBanner(banner);
+      if (banner === "unlock-success" && canvasId) {
+        setPendingUnlockCanvasId(canvasId);
+      }
       const url = new URL(window.location.href);
       url.searchParams.delete("checkout");
       url.searchParams.delete("unlock");
       url.searchParams.delete("canvas");
       window.history.replaceState({}, "", url.toString());
-      if (banner === "checkout-success" || banner === "unlock-success") {
+      // Subscription-success banner self-dismisses after 8s. The unlock-
+      // success banner stays visible until the polling effect either
+      // auto-downloads (which clears the banner) or times out.
+      if (banner === "checkout-success") {
         const t = setTimeout(() => setCheckoutBanner(null), 8000);
         return () => clearTimeout(t);
       }
     }
   }, []);
+
+  // Poll the canvas list until the unlocked canvas is re-rendered clean,
+  // then auto-trigger the download. Webhook re-render normally takes 5-10s;
+  // we give it 90s before falling back to "go find it in your library."
+  useEffect(() => {
+    if (!pendingUnlockCanvasId) return;
+    let cancelled = false;
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 90_000;
+    const POLL_MS = 2_000;
+
+    type RawRow = {
+      id: string;
+      name: string;
+      animation: string;
+      filter: string;
+      duration: number;
+      status: string | null;
+      videoURL: string | null;
+      thumbnailURL: string | null;
+      paid_one_off_id: string | null;
+    };
+
+    async function tick() {
+      if (cancelled) return;
+      try {
+        const r = await fetch("/api/canvases");
+        if (r.ok) {
+          const { canvases: rows } = (await r.json()) as { canvases: RawRow[] };
+          // Refresh React state so the library reflects the unlocked status
+          // immediately, even before the download lands.
+          setCanvases(
+            rows.map((row) => ({
+              id: row.id,
+              name: row.name,
+              effect: labelFor(EFFECTS, row.animation),
+              filter: labelFor(FILTERS, row.filter),
+              duration: row.duration,
+              thumbnailURL: row.thumbnailURL || "",
+              videoURL: row.videoURL || "",
+              paidOneOffId: row.paid_one_off_id,
+            }))
+          );
+          const target = rows.find((row) => row.id === pendingUnlockCanvasId);
+          // Ready when: payment recorded, re-render finished, signed URL minted.
+          if (
+            target &&
+            target.paid_one_off_id &&
+            target.status === "done" &&
+            target.videoURL
+          ) {
+            await triggerDownload(target.videoURL, `${target.name}.mp4`);
+            setPendingUnlockCanvasId(null);
+            setCheckoutBanner("unlock-downloaded");
+            setTimeout(() => setCheckoutBanner(null), 5000);
+            return;
+          }
+        }
+      } catch { /* transient — try again next tick */ }
+
+      if (Date.now() - startedAt < TIMEOUT_MS) {
+        setTimeout(tick, POLL_MS);
+      } else {
+        // Give up auto-downloading. Leave the banner up so the user knows
+        // payment worked; they can hit Download in the library when ready.
+        setPendingUnlockCanvasId(null);
+      }
+    }
+    void tick();
+    return () => { cancelled = true; };
+  }, [pendingUnlockCanvasId]);
 
   // Cleanup all object URLs on unmount.
   useEffect(() => {
@@ -565,7 +650,12 @@ export default function CanvasBuddyApp() {
       )}
       {checkoutBanner === "unlock-success" && (
         <Banner color="purple" onDismiss={() => setCheckoutBanner(null)}>
-          Watermark removed — re-rendering your canvas. Refresh in a few seconds.
+          Payment received — preparing your watermark-free download…
+        </Banner>
+      )}
+      {checkoutBanner === "unlock-downloaded" && (
+        <Banner color="purple" onDismiss={() => setCheckoutBanner(null)}>
+          Done — your watermark-free canvas just downloaded.
         </Banner>
       )}
       {checkoutBanner === "checkout-cancelled" && (
