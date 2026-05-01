@@ -473,56 +473,69 @@ export default function CanvasBuddyApp() {
       const blob = await r.blob();
       const localVideoURL = URL.createObjectURL(blob);
 
-      // Upload the rendered MP4 + the source image (as the thumbnail) to
-      // Supabase Storage so the canvas survives refresh, not just the metadata.
-      // The route returns signed URLs we can use directly in <video>/<img>.
-      let canvasId = String(Date.now());
-      let videoURL = localVideoURL;
-      let thumbnailURL = sourceURL!;
+      // Show the fresh render *immediately* — the Supabase upload below can
+      // take several seconds, and waiting for it before swapping the preview
+      // makes users think nothing changed (they keep staring at the previous
+      // result while the new one's already on the wire). The upload still
+      // happens, just asynchronously, and we update state when it lands.
+      const tempId = String(Date.now());
       const canvasName = `Canvas ${canvases.length + 1}`;
-      try {
-        const fd = new FormData();
-        fd.append(
-          "metadata",
-          JSON.stringify({
-            name: canvasName,
-            animation: effect,
-            filter,
-            duration,
-            status: "done",
-          })
-        );
-        fd.append("video", new File([blob], "canvas.mp4", { type: "video/mp4" }));
-        if (sourceFile) {
-          fd.append(
-            "thumbnail",
-            new File([sourceFile], "thumb." + (sourceFile.type === "image/png" ? "png" : "jpg"), {
-              type: sourceFile.type || "image/jpeg",
-            })
-          );
-        }
-        const saveRes = await fetch("/api/canvases", { method: "POST", body: fd });
-        if (saveRes.ok) {
-          const { canvas } = await saveRes.json();
-          canvasId = canvas.id;
-          if (canvas.videoURL) videoURL = canvas.videoURL;
-          if (canvas.thumbnailURL) thumbnailURL = canvas.thumbnailURL;
-        }
-      } catch { /* save failure is non-fatal — user still sees the in-memory result */ }
-
-      const next: SavedCanvas = {
-        id: canvasId,
+      const tempCanvas: SavedCanvas = {
+        id: tempId,
         name: canvasName,
         effect: labelFor(EFFECTS, effect),
         filter: labelFor(FILTERS, filter),
         duration,
-        thumbnailURL,
-        videoURL,
+        thumbnailURL: sourceURL!,
+        videoURL: localVideoURL,
       };
-      setCanvases((cs) => [next, ...cs]);
-      setResultURL(videoURL);
-      setSelectedCanvasId(canvasId);
+      setCanvases((cs) => [tempCanvas, ...cs]);
+      setResultURL(localVideoURL);
+      setSelectedCanvasId(tempId);
       setVideosUsed((n) => n + 1);
+
+      // Persist to Supabase Storage in the background so the canvas survives
+      // a refresh. On success, swap the temporary blob URL row for the real
+      // signed-URL row in the library; the center preview stays on the local
+      // blob (no need to swap that — the bytes are identical).
+      void (async () => {
+        try {
+          const fd = new FormData();
+          fd.append(
+            "metadata",
+            JSON.stringify({
+              name: canvasName,
+              animation: effect,
+              filter,
+              duration,
+              status: "done",
+            })
+          );
+          fd.append("video", new File([blob], "canvas.mp4", { type: "video/mp4" }));
+          if (sourceFile) {
+            fd.append(
+              "thumbnail",
+              new File([sourceFile], "thumb." + (sourceFile.type === "image/png" ? "png" : "jpg"), {
+                type: sourceFile.type || "image/jpeg",
+              })
+            );
+          }
+          const saveRes = await fetch("/api/canvases", { method: "POST", body: fd });
+          if (!saveRes.ok) return;
+          const { canvas } = await saveRes.json();
+          const persisted: SavedCanvas = {
+            id: canvas.id,
+            name: canvas.name,
+            effect: labelFor(EFFECTS, canvas.animation),
+            filter: labelFor(FILTERS, canvas.filter),
+            duration: canvas.duration,
+            thumbnailURL: canvas.thumbnailURL || sourceURL!,
+            videoURL: canvas.videoURL || localVideoURL,
+          };
+          setCanvases((cs) => cs.map((c) => (c.id === tempId ? persisted : c)));
+          setSelectedCanvasId((cur) => (cur === tempId ? canvas.id : cur));
+        } catch { /* save failure is non-fatal — user still sees the in-memory result */ }
+      })();
     } catch (e) {
       setRenderError(e instanceof Error ? e.message : String(e));
     } finally {
