@@ -37,6 +37,7 @@ const FILTER_CSS: Record<string, string> = {
   noir:       "grayscale(1) contrast(1.45) brightness(0.95)",
   retro:      "sepia(0.45) saturate(1.10) hue-rotate(-15deg) contrast(0.92) brightness(1.05)",
   vhs:        "saturate(0.85) contrast(0.95) hue-rotate(-4deg) blur(0.4px)",
+  polaroid:   "saturate(0.78) contrast(0.88) sepia(0.18) hue-rotate(-6deg) brightness(1.06)",
   softfocus:  "saturate(0.92) brightness(1.04) blur(1.5px) contrast(0.88)",
   glitch:     "saturate(1.4) contrast(1.20) hue-rotate(0deg)", // overridden by cb-glitch-flicker keyframe
   shimmer:    "saturate(1.05) brightness(1.05)",

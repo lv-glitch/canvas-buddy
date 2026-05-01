@@ -33,6 +33,7 @@ const FILTERS: OptionItem[] = [
   { value: "noir",       label: "Noir" },
   { value: "retro",      label: "Retro" },
   { value: "vhs",        label: "VHS" },
+  { value: "polaroid",   label: "Polaroid" },
   { value: "softfocus",  label: "Soft Focus" },
   { value: "glitch",     label: "Glitch" },
   { value: "shimmer",    label: "Shimmer" },
