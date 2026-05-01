@@ -21,12 +21,12 @@ primary_region = "sjc"
     # Leave blank in dev; verification fails open on the backend if not set.
     NEXT_PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADFLxEzHUsroEZRA"
     # Sentry — DSN is browser-facing (inlined into the client bundle). Org
-    # and project are needed at build time for source map upload. Set the
-    # actual values here once you've created the Sentry project. Leave
-    # blank to ship without error tracking (the SDK fail-opens).
-    NEXT_PUBLIC_SENTRY_DSN = ""
-    SENTRY_ORG = ""
-    SENTRY_PROJECT = ""
+    # and project identify the Sentry project for source map upload at
+    # build time. SENTRY_AUTH_TOKEN is sensitive and passed via
+    # `fly deploy --build-arg SENTRY_AUTH_TOKEN=...`, not committed.
+    NEXT_PUBLIC_SENTRY_DSN = "https://9fa672ead8975a3f08d8edbab73b73b0@o4511315972849664.ingest.us.sentry.io/4511316060733440"
+    SENTRY_ORG = "awesome-innovation-studio-llc"
+    SENTRY_PROJECT = "javascript-nextjs-canvas-buddy"
 
 [env]
   PORT = "3030"
