@@ -64,9 +64,16 @@ body {
   75%  { transform: scale(1.10) translate(-3%, 3%); }
   100% { transform: scale(1.10) translate(-3%, -2%); }
 }
+/* Pulse: heartbeat-cadence sharp scale snap. Backend renders 2 beats/sec
+   regardless of canvas duration; CSS animation-duration is forced to 0.5s
+   in CenterPanel so the live preview matches that cadence (one keyframe
+   cycle = one beat). The 0%-40% hold + sharp 50% spike + return mirrors
+   the sin^6 envelope on the server. No filter modulation here — that
+   would override whatever look filter the user picked. */
 @keyframes cb-pulse {
-  0%, 100% { transform: scale(1.04); filter: brightness(1); }
-  50%      { transform: scale(1.18); filter: brightness(1.12); }
+  0%, 40%  { transform: scale(1.05); }
+  50%      { transform: scale(1.20); }
+  60%, 100% { transform: scale(1.05); }
 }
 @keyframes cb-kenburns {
   0%   { transform: scale(1.02) translate(-2%, -2%); }
@@ -80,9 +87,22 @@ body {
   0%, 100% { transform: scale(1.05) rotate(-4deg); }
   50%      { transform: scale(1.18) rotate(4deg); }
 }
+/* Glow: photo essentially still (matches backend's barely-perceptible
+   1.04↔1.06 breath); the throbbing halation is rendered by a separate
+   overlay div in CenterPanel (cb-glow-throb below) so it composites on
+   top of whatever look filter the user picked, the same way the backend
+   does it after the look stage. */
 @keyframes cb-glow {
-  0%, 100% { transform: scale(1.04); filter: brightness(0.92) saturate(0.95); }
-  50%      { transform: scale(1.10); filter: brightness(1.18) saturate(1.15); }
+  0%, 100% { transform: scale(1.04); }
+  50%      { transform: scale(1.06); }
+}
+/* Halation pass for the glow effect — animated on a sibling overlay
+   element with `mix-blend-mode: lighten` so it brightens the underlying
+   photo without tinting it (matches the backend's c1/c2 chroma pass-
+   through). 1Hz throb, opacity 0 → 0.55 → 0. */
+@keyframes cb-glow-throb {
+  0%, 100% { opacity: 0; }
+  50%      { opacity: 0.55; }
 }
 @keyframes cb-rotate {
   0%   { transform: scale(1.45) rotate(0deg); }

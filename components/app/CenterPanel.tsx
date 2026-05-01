@@ -61,6 +61,18 @@ const EFFECT_TIMING: Record<string, string> = {
   rotate: "linear",
 };
 
+// Per-effect animation-duration override (in seconds). For most effects we
+// match the canvas duration so one keyframe cycle = one canvas loop. Pulse
+// and glow are different on the backend: they run at fixed cadences (2
+// beats/sec for pulse, 1 throb/sec for glow) regardless of canvas duration,
+// because the backend formulas are time-based, not phase-based. The live
+// preview pins these to the same fixed cycle so what the user sees matches
+// what they'll get.
+const EFFECT_DURATION_S: Record<string, number> = {
+  pulse: 0.5, // 2 beats per second
+  glow:  1.0, // 1 throb per second
+};
+
 export function CenterPanel({
   sourceURL,
   effect,
@@ -109,15 +121,17 @@ export function CenterPanel({
   }, [effect, duration, sourceURL]);
 
   const isGlitch = filter === "glitch";
+  const isGlow = effect === "glow";
   // When glitch is selected, the filter property is animated by a keyframe
   // (cb-glitch-flicker), so the static `filter:` style must be cleared or it
   // would override the animation. For every other filter we set it directly.
   const css = isGlitch ? undefined : FILTER_CSS[filter] || "none";
   const animName = EFFECT_ANIM[effect] || "none";
   const animTiming = EFFECT_TIMING[effect] || "ease-in-out";
+  const animDurationS = EFFECT_DURATION_S[effect] ?? duration;
   const animation = playing
     ? [
-        `${animName} ${duration}s ${animTiming} infinite`,
+        `${animName} ${animDurationS}s ${animTiming} infinite`,
         // 2.5s cycle, linear so the keyframe-spaced "snap" transitions read
         // as TV interference rather than smooth color shifts.
         isGlitch ? "cb-glitch-flicker 2.5s linear infinite" : null,
@@ -153,12 +167,31 @@ export function CenterPanel({
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : sourceURL ? (
-              <img
-                src={sourceURL}
-                alt="Preview"
-                className="absolute inset-0 w-full h-full object-cover"
-                style={{ filter: css, animation }}
-              />
+              <>
+                <img
+                  src={sourceURL}
+                  alt="Preview"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ filter: css, animation }}
+                />
+                {/* Glow halation overlay — radial bright glow with a 1Hz
+                    opacity throb, lighten-blended on top of the look-
+                    filtered photo. Matches the backend's post-filter
+                    bloom pass without disturbing the look filter's
+                    color grade. */}
+                {isGlow && playing && (
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background:
+                        "radial-gradient(ellipse at center, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.35) 40%, rgba(255,255,255,0) 75%)",
+                      mixBlendMode: "lighten",
+                      animation: "cb-glow-throb 1s ease-in-out infinite",
+                    }}
+                  />
+                )}
+              </>
             ) : (
               <div className="text-center px-6">
                 <div className="w-12 h-12 rounded-full bg-[var(--color-surface-2)] mx-auto flex items-center justify-center mb-3 text-[var(--color-ink-muted)]">
