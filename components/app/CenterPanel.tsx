@@ -169,12 +169,61 @@ export function CenterPanel({
               />
             ) : sourceURL ? (
               <>
-                <img
-                  src={sourceURL}
-                  alt="Preview"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ filter: css, animation }}
-                />
+                {filter === "polaroid" ? (
+                  // Polaroid composite preview — mirrors the backend pipeline:
+                  // blurred-dimmed backdrop with a white-bordered card on top
+                  // (asymmetric bottom border, square photo area inside). The
+                  // card itself is static; the effect animation runs on the
+                  // photo inside, matching what the backend renders.
+                  <>
+                    <img
+                      src={sourceURL}
+                      alt=""
+                      aria-hidden
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{ filter: "blur(10px) brightness(0.7) saturate(0.7)" }}
+                    />
+                    <div
+                      className="absolute bg-white shadow-2xl"
+                      style={{
+                        left: "6.5%",
+                        right: "6.5%",
+                        top: "22.5%",
+                        bottom: "22.5%",
+                      }}
+                    >
+                      <div
+                        className="absolute overflow-hidden"
+                        style={{
+                          left: "7.5%",
+                          right: "7.5%",
+                          top: "4.7%",
+                          aspectRatio: "1 / 1",
+                        }}
+                      >
+                        <img
+                          src={sourceURL}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          style={{
+                            // Bias the square crop upward so portraits keep
+                            // their faces (matches backend's y-offset crop).
+                            objectPosition: "center 30%",
+                            filter: css,
+                            animation,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <img
+                    src={sourceURL}
+                    alt="Preview"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={{ filter: css, animation }}
+                  />
+                )}
                 {/* Glow halation overlay — radial bright glow with a 1Hz
                     opacity throb, lighten-blended on top of the look-
                     filtered photo. Matches the backend's post-filter
