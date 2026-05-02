@@ -711,6 +711,7 @@ export default function CanvasBuddyApp() {
           aiGenerationsLeft={aiGenerationsLeft}
           onAIGenerate={aiGenerate}
           onTurnstileToken={setTurnstileToken}
+          turnstileToken={turnstileToken}
           aiBusy={aiBusy}
           aiError={aiError}
           effect={effect}

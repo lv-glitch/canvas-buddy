@@ -24,6 +24,10 @@ interface LeftPanelProps {
   aiGenerationsLeft: number;
   onAIGenerate: () => void;
   onTurnstileToken: (token: string) => void;
+  /** Latest Turnstile token. Empty until Cloudflare's invisible bot
+   *  check finishes — Generate button stays disabled while empty so we
+   *  can never POST without a token. */
+  turnstileToken: string;
   aiBusy: boolean;
   aiError: string | null;
 
@@ -157,10 +161,20 @@ function SourceSection(props: LeftPanelProps) {
           <button
             type="button"
             onClick={props.onAIGenerate}
-            disabled={!props.aiPrompt.trim() || props.aiBusy || props.aiGenerationsLeft <= 0}
+            disabled={
+              !props.aiPrompt.trim() ||
+              props.aiBusy ||
+              props.aiGenerationsLeft <= 0 ||
+              !props.turnstileToken
+            }
+            title={!props.turnstileToken ? "Verifying you're not a bot…" : undefined}
             className="w-full inline-flex items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-purple)] px-4 py-2.5 text-sm font-semibold text-black hover:bg-[var(--color-purple-hover)] transition-colors disabled:bg-[var(--color-surface)] disabled:text-[var(--color-ink-muted)] disabled:cursor-not-allowed"
           >
-            {props.aiBusy ? "Generating…" : "✨ Generate"}
+            {props.aiBusy
+              ? "Generating…"
+              : !props.turnstileToken
+              ? "Verifying…"
+              : "✨ Generate"}
           </button>
           {/* Invisible bot check — only renders interaction UI for suspect
               traffic. Token sets on mount; refreshes itself on expiry. */}
