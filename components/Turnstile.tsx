@@ -78,8 +78,19 @@ export function Turnstile({ onToken, siteKey, className }: TurnstileProps) {
           // Token's stale; reset and request a fresh one.
           if (widgetIdRef.current) window.turnstile?.reset(widgetIdRef.current);
         },
+        "error-callback": () => {
+          // Cloudflare reports a fatal widget error (network, blocked
+          // script, etc.). Reset and try again so the user isn't stuck
+          // with an empty token forever.
+          if (widgetIdRef.current) window.turnstile?.reset(widgetIdRef.current);
+        },
         theme: "dark",
-        appearance: "interaction-only",
+        // `always` keeps the widget visible — passes invisibly for clean
+        // browsers in <1s but stays clickable for anyone Cloudflare wants
+        // to interact with. Earlier `interaction-only` hid the widget for
+        // suspect traffic too, leaving the AI button stuck on "Verifying…"
+        // when the user actually needed to click the box.
+        appearance: "always",
         size: "flexible",
       });
     }
