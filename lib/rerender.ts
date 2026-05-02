@@ -17,6 +17,39 @@ import { getSupabase, CANVASES_BUCKET, type CanvasRow } from "./supabase";
  * regen source). If a future feature lets users edit the source post-
  * generation, we'd need to track them separately.
  */
+/**
+ * Attempt the clean re-render with one automatic retry on failure.
+ * Most failures are transient — Fly machine cold-start, brief FFmpeg OOM
+ * under spec validator, fal.ai/api network blips. A single retry with a
+ * short backoff catches those without burdening the Stripe webhook
+ * (which has a 30s timeout to honor).
+ */
+export async function rerenderCanvasCleanWithRetry(canvasId: string): Promise<void> {
+  try {
+    await rerenderCanvasClean(canvasId);
+    return;
+  } catch (firstErr) {
+    console.warn(
+      `[rerender] first attempt failed for ${canvasId}, retrying in 5s: ${
+        firstErr instanceof Error ? firstErr.message : String(firstErr)
+      }`
+    );
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+    try {
+      await rerenderCanvasClean(canvasId);
+      console.log(`[rerender] retry succeeded for ${canvasId}`);
+      return;
+    } catch (secondErr) {
+      console.error(
+        `[rerender] retry also failed for ${canvasId}: ${
+          secondErr instanceof Error ? secondErr.message : String(secondErr)
+        }`
+      );
+      throw secondErr;
+    }
+  }
+}
+
 export async function rerenderCanvasClean(canvasId: string): Promise<void> {
   const supabase = getSupabase();
   const TOOL_API = process.env.NEXT_PUBLIC_TOOL_API || "https://api.canvasbuddy.io";

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabase, signedCanvasUrl, CANVASES_BUCKET } from "@/lib/supabase";
-import { getOrCreateCurrentUser } from "@/lib/users";
+import { getOrCreateCurrentUser, QUOTAS } from "@/lib/users";
 
 /** GET /api/canvases — list the current user's canvases (newest first), with
  *  short-lived signed URLs for the MP4 and thumbnail. */
@@ -44,7 +44,23 @@ export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  await getOrCreateCurrentUser();
+  const user = await getOrCreateCurrentUser();
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  // Defense-in-depth quota cap. The render proxy /api/render also blocks
+  // over-quota users before doing the expensive render, but a determined
+  // caller could try to save directly here without going through render.
+  // Refuse so the library can never grow past the plan's videos limit.
+  const limit = QUOTAS[user.plan];
+  if (limit.videos !== Infinity && user.videos_used_this_period >= limit.videos) {
+    return NextResponse.json(
+      {
+        error: "You've used all 5 free renders. Pay $4.99 per canvas or upgrade to Pro for unlimited.",
+        code: "quota_exceeded",
+      },
+      { status: 402 }
+    );
+  }
 
   const contentType = req.headers.get("content-type") || "";
   const isMultipart = contentType.includes("multipart/form-data");

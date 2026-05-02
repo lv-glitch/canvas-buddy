@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getSupabase } from "@/lib/supabase";
-import { rerenderCanvasClean } from "@/lib/rerender";
+import { rerenderCanvasCleanWithRetry } from "@/lib/rerender";
 import { sendEmail, welcomeToProEmail, watermarkRemovedEmail } from "@/lib/email";
 
 /** POST /api/stripe/webhook — Stripe webhook handler.
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
             .eq("id", canvasId)
             .eq("user_id", userId);
           try {
-            await rerenderCanvasClean(canvasId);
+            await rerenderCanvasCleanWithRetry(canvasId);
             // Confirmation email — fetch user email + canvas name for personalisation.
             const [{ data: u }, { data: c }] = await Promise.all([
               supabase.from("users").select("email").eq("id", userId).single(),

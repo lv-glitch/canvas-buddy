@@ -41,10 +41,9 @@ const FILTERS: OptionItem[] = [
 
 type Plan = "free" | "payg" | "pro";
 
-// Where the FFmpeg + Flux backend lives. Override with NEXT_PUBLIC_TOOL_API
-// for staging/prod; defaults to the local canvas-maker on port 3737.
-const TOOL_API =
-  process.env.NEXT_PUBLIC_TOOL_API || "http://localhost:3737";
+// canvas-maker is reached via /api/render (server-side proxy that adds
+// the backend token + enforces quota + decides watermark from the real
+// plan). Direct browser → canvas-maker calls are no longer used.
 
 export default function CanvasBuddyApp() {
   // Plan + quota come from the database (via /api/me). Set on mount.
@@ -459,11 +458,10 @@ export default function CanvasBuddyApp() {
       fd.append("filter", filter);
       fd.append("layout", "fill");
       fd.append("duration", String(duration));
-      // Pro renders are watermark-free; everyone else gets the brand mark
-      // baked into the bottom-right corner. Per-canvas unlock (Phase B) will
-      // re-render with watermark=false when paid_one_off_id is set.
-      fd.append("watermark", plan === "pro" ? "false" : "true");
-      const r = await fetch(`${TOOL_API}/api/generate`, {
+      // Watermark is now decided server-side in /api/render based on the
+      // authenticated user's actual plan (free → watermark, pro → clean).
+      // Don't send a `watermark` field — the proxy ignores client claims.
+      const r = await fetch(`/api/render`, {
         method: "POST",
         body: fd,
       });
