@@ -28,6 +28,9 @@ interface LeftPanelProps {
    *  check finishes — Generate button stays disabled while empty so we
    *  can never POST without a token. */
   turnstileToken: string;
+  /** Bump from parent after each AI submit to force the widget to issue
+   *  a new token (Turnstile tokens are single-use). */
+  turnstileResetSignal: number;
   aiBusy: boolean;
   aiError: string | null;
 
@@ -176,9 +179,13 @@ function SourceSection(props: LeftPanelProps) {
               ? "Verifying…"
               : "✨ Generate"}
           </button>
-          {/* Invisible bot check — only renders interaction UI for suspect
-              traffic. Token sets on mount; refreshes itself on expiry. */}
-          <Turnstile onToken={props.onTurnstileToken} className="mt-1" />
+          {/* Bot check — token sets on mount; resets after each submit
+              (parent bumps resetSignal). Refreshes itself on expiry. */}
+          <Turnstile
+            onToken={props.onTurnstileToken}
+            resetSignal={props.turnstileResetSignal}
+            className="mt-1"
+          />
           {props.aiError ? (
             <p className="text-[11px] text-[#ff6b6b] leading-snug">
               {props.aiError}

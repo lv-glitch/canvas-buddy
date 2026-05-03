@@ -63,6 +63,9 @@ export default function CanvasBuddyApp() {
   const [aiBusy, setAIBusy] = useState<boolean>(false);
   const [aiError, setAIError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string>("");
+  // Bumped after each AI submit so the Turnstile widget issues a fresh
+  // single-use token for the next attempt.
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState<number>(0);
 
   // Effect / filter / duration
   const [effect, setEffect] = useState<string>("zoom");
@@ -438,6 +441,10 @@ export default function CanvasBuddyApp() {
       setAIError(e instanceof Error ? e.message : String(e));
     } finally {
       setAIBusy(false);
+      // Tokens are single-use — invalidate local copy and ask the widget
+      // for a new one so a retry / next prompt has a fresh token ready.
+      setTurnstileToken("");
+      setTurnstileResetSignal((n) => n + 1);
     }
   }
 
@@ -712,6 +719,7 @@ export default function CanvasBuddyApp() {
           onAIGenerate={aiGenerate}
           onTurnstileToken={setTurnstileToken}
           turnstileToken={turnstileToken}
+          turnstileResetSignal={turnstileResetSignal}
           aiBusy={aiBusy}
           aiError={aiError}
           effect={effect}

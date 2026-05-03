@@ -25,6 +25,10 @@ interface TurnstileProps {
   /** Visual hint where the widget mounts. Cloudflare manages its own size; the
    *  outer div is just a wrapper for layout. */
   className?: string;
+  /** Bump this to force the widget to issue a new token. Turnstile tokens
+   *  are single-use — after every form submit the parent should bump this
+   *  so the next click has a fresh token waiting. */
+  resetSignal?: number;
 }
 
 declare global {
@@ -51,7 +55,7 @@ declare global {
 const SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 
-export function Turnstile({ onToken, siteKey, className }: TurnstileProps) {
+export function Turnstile({ onToken, siteKey, className, resetSignal }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
@@ -59,6 +63,16 @@ export function Turnstile({ onToken, siteKey, className }: TurnstileProps) {
   // Keep the latest callback in a ref so we don't re-mount the widget every
   // time the parent re-renders.
   useEffect(() => { onTokenRef.current = onToken; }, [onToken]);
+
+  // Reset the widget when the parent bumps the signal — Turnstile tokens
+  // are single-use, so after each form submit the parent invalidates its
+  // local copy and bumps this to issue a fresh one.
+  useEffect(() => {
+    if (resetSignal === undefined || resetSignal === 0) return;
+    if (widgetIdRef.current && window.turnstile) {
+      window.turnstile.reset(widgetIdRef.current);
+    }
+  }, [resetSignal]);
 
   useEffect(() => {
     const key = siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
