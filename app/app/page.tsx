@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import posthog from "posthog-js";
 import { TopNav } from "@/components/app/TopNav";
 import { LeftPanel, type OptionItem } from "@/components/app/LeftPanel";
 import { CenterPanel } from "@/components/app/CenterPanel";
@@ -130,6 +131,13 @@ export default function CanvasBuddyApp() {
     else if (unlock === "cancelled") banner = "unlock-cancelled";
     if (banner) {
       setCheckoutBanner(banner);
+      if (banner === "checkout-success") {
+        posthog.capture("pro_subscription_completed");
+      } else if (banner === "checkout-cancelled") {
+        posthog.capture("pro_subscription_cancelled");
+      } else if (banner === "unlock-cancelled") {
+        posthog.capture("watermark_unlock_cancelled");
+      }
       if (banner === "unlock-success" && canvasId) {
         setPendingUnlockCanvasId(canvasId);
       }
@@ -199,6 +207,9 @@ export default function CanvasBuddyApp() {
             target.videoURL
           ) {
             await triggerDownload(target.videoURL, `${target.name}.mp4`);
+            posthog.capture("watermark_unlock_completed", {
+              canvas_id: pendingUnlockCanvasId,
+            });
             setPendingUnlockCanvasId(null);
             setCheckoutBanner("unlock-downloaded");
             setTimeout(() => setCheckoutBanner(null), 5000);
@@ -422,6 +433,7 @@ export default function CanvasBuddyApp() {
     if (aiBusy || !aiPrompt.trim() || aiGenerationsLeft <= 0) return;
     setAIBusy(true);
     setAIError(null);
+    posthog.capture("ai_image_generate_started", { prompt_length: aiPrompt.length });
     try {
       // Goes through our /api/generate-image proxy which adds the auth +
       // backend-token. Direct calls to api.canvasbuddy.io now require it.
@@ -437,8 +449,11 @@ export default function CanvasBuddyApp() {
       const blob = await r.blob();
       pickFile(new File([blob], "ai.png", { type: "image/png" }));
       setAIGenerationsLeft((n) => Math.max(0, n - 1));
+      posthog.capture("ai_image_generate_succeeded");
     } catch (e) {
-      setAIError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setAIError(msg);
+      posthog.capture("ai_image_generate_failed", { error: msg.slice(0, 200) });
     } finally {
       setAIBusy(false);
       // Tokens are single-use — invalidate local copy and ask the widget
@@ -458,6 +473,9 @@ export default function CanvasBuddyApp() {
 
     setIsGenerating(true);
     setRenderError(null);
+    posthog.capture("canvas_generate_started", {
+      effect, filter, duration, plan, source_mode: sourceMode,
+    });
     try {
       const fd = new FormData();
       fd.append("image", sourceFile);
@@ -499,6 +517,9 @@ export default function CanvasBuddyApp() {
       setResultURL(localVideoURL);
       setSelectedCanvasId(tempId);
       setVideosUsed((n) => n + 1);
+      posthog.capture("canvas_generate_succeeded", {
+        effect, filter, duration, plan, size_mb: +(blob.size / 1024 / 1024).toFixed(2),
+      });
 
       // Persist to Supabase Storage in the background so the canvas survives
       // a refresh. On success, swap the temporary blob URL row for the real
@@ -543,7 +564,9 @@ export default function CanvasBuddyApp() {
         } catch { /* save failure is non-fatal — user still sees the in-memory result */ }
       })();
     } catch (e) {
-      setRenderError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setRenderError(msg);
+      posthog.capture("canvas_generate_failed", { error: msg.slice(0, 200), plan });
     } finally {
       setIsGenerating(false);
     }
@@ -794,6 +817,7 @@ export default function CanvasBuddyApp() {
         }}
         onUpgrade={async () => {
           if (!downloadModalFor) return;
+          posthog.capture("watermark_unlock_started", { canvas_id: downloadModalFor.id });
           try {
             const r = await fetch("/api/checkout/canvas", {
               method: "POST",
@@ -804,7 +828,9 @@ export default function CanvasBuddyApp() {
             if (!r.ok || !data.url) throw new Error(data.error || "Checkout failed.");
             window.location.href = data.url;
           } catch (e) {
-            alert(`Couldn't start checkout:\n\n${e instanceof Error ? e.message : String(e)}`);
+            const msg = e instanceof Error ? e.message : String(e);
+            posthog.capture("watermark_unlock_checkout_failed", { error: msg.slice(0, 200) });
+            alert(`Couldn't start checkout:\n\n${msg}`);
             setDownloadModalFor(null);
           }
         }}

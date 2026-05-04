@@ -28,6 +28,9 @@ export function TopNav({
   async function startCheckout() {
     setBillingBusy(true);
     setBillingErr(null);
+    void import("posthog-js").then(({ default: posthog }) =>
+      posthog.capture("pro_subscription_started")
+    );
     try {
       const r = await fetch("/api/checkout", {
         method: "POST",
