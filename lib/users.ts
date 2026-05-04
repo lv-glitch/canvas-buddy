@@ -88,7 +88,11 @@ export async function backfillWelcomeEmailIfNeeded(
 }
 
 export const QUOTAS = {
-  free: { videos: 5, aiGenerations: 3 },
-  payg: { videos: Infinity, aiGenerations: 5 },
-  pro:  { videos: Infinity, aiGenerations: Infinity },
+  free:     { videos: 5, aiGenerations: 3 },
+  payg:     { videos: Infinity, aiGenerations: 5 },
+  pro:      { videos: Infinity, aiGenerations: Infinity },
+  // Internal team accounts. Same limits as pro, but the separate tier
+  // lets us filter internal users out of conversion analytics in
+  // PostHog and Stripe revenue reports.
+  internal: { videos: Infinity, aiGenerations: Infinity },
 } as const;

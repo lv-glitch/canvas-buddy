@@ -73,7 +73,7 @@ export async function signedCanvasUrl(
 export interface UserRow {
   id: string;
   email: string;
-  plan: "free" | "pro" | "payg";
+  plan: "free" | "pro" | "payg" | "internal";
   stripe_customer_id: string | null;
   videos_used_this_period: number;
   ai_generations_used_this_period: number;

@@ -18,7 +18,7 @@ export interface SavedCanvas {
 
 interface RightPanelProps {
   canvases: SavedCanvas[];
-  plan: "free" | "payg" | "pro";
+  plan: "free" | "payg" | "pro" | "internal";
   selectedId: string | null;
   onSelect: (c: SavedCanvas) => void;
   onRename: (id: string, name: string) => void;
@@ -35,7 +35,9 @@ export function RightPanel({
   onDownload,
   onDelete,
 }: RightPanelProps) {
-  const isPro = plan === "pro";
+  // "Pro-equivalent" — Pro and internal team accounts both skip the
+  // watermark upsell and download direct.
+  const isPro = plan === "pro" || plan === "internal";
 
   return (
     <aside className="w-[240px] flex-shrink-0 border-l border-[var(--color-border)] bg-[#0a0a0a] overflow-y-auto">

@@ -42,11 +42,11 @@ export async function POST(req: Request) {
     );
   }
 
-  // Server-determined watermark: only Pro and per-canvas-paid renders are
-  // clean. Free / payg-without-canvas-paid get the brand mark. The actual
-  // per-canvas unlock re-render runs from the Stripe webhook, not this
-  // route — so anything routed through here that's not Pro gets watermarked.
-  const watermark = user.plan === "pro" ? "false" : "true";
+  // Server-determined watermark: Pro and internal team renders are clean;
+  // free / payg-without-canvas-paid get the brand mark. The per-canvas
+  // unlock re-render runs from the Stripe webhook, not this route.
+  const isUnlimited = user.plan === "pro" || user.plan === "internal";
+  const watermark = isUnlimited ? "false" : "true";
 
   // Pull the multipart body, replace whatever `watermark` field the
   // client sent with our authoritative one, then forward.

@@ -40,7 +40,7 @@ const FILTERS: OptionItem[] = [
   { value: "shimmer",    label: "Shimmer" },
 ];
 
-type Plan = "free" | "payg" | "pro";
+type Plan = "free" | "payg" | "pro" | "internal";
 
 // canvas-maker is reached via /api/render (server-side proxy that adds
 // the backend token + enforces quota + decides watermark from the real
@@ -588,7 +588,7 @@ export default function CanvasBuddyApp() {
     const selected =
       canvases.find((c) => c.id === selectedCanvasId) ?? canvases[0];
     const filename = `${selected?.name || "canvas"}.mp4`;
-    if (plan === "pro" || plan === "payg" || selected?.paidOneOffId) {
+    if (plan === "pro" || plan === "internal" || plan === "payg" || selected?.paidOneOffId) {
       triggerDownload(resultURL, filename);
     } else if (selected) {
       setDownloadModalFor(selected);
@@ -601,7 +601,7 @@ export default function CanvasBuddyApp() {
     // Pro users always download direct. So do free users on a canvas
     // that's already been unlocked via the $4.99 one-off — no upsell
     // modal once they've paid.
-    if (plan === "pro" || plan === "payg" || c.paidOneOffId) {
+    if (plan === "pro" || plan === "internal" || plan === "payg" || c.paidOneOffId) {
       triggerDownload(c.videoURL, `${c.name}.mp4`);
     } else {
       setDownloadModalFor(c);

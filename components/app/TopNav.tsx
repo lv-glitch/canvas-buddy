@@ -8,7 +8,7 @@ import { Logo } from "@/components/Logo";
 interface TopNavProps {
   videosUsed: number;
   videosLimit: number | null;            // null = unlimited (pro)
-  plan: "free" | "payg" | "pro";
+  plan: "free" | "payg" | "pro" | "internal";
   subscriptionEndsAt?: string | null;
   cancelAtPeriodEnd?: boolean;
   onOpenSettings: () => void;
@@ -79,7 +79,10 @@ export function TopNav({
   }
 
   const planLabel =
-    plan === "pro" ? "Pro" : plan === "payg" ? "Per Canvas" : "Free plan";
+    plan === "pro"      ? "Pro"
+    : plan === "internal" ? "Team"
+    : plan === "payg"   ? "Per Canvas"
+    :                     "Free plan";
   let status: string;
   if (plan === "pro" && cancelAtPeriodEnd && subscriptionEndsAt) {
     // Cancelled-but-still-active — show the end date so user knows when
@@ -90,7 +93,7 @@ export function TopNav({
       day: "numeric",
     });
     status = `Pro · ends ${ends}`;
-  } else if (plan === "pro" || videosLimit === null) {
+  } else if (plan === "pro" || plan === "internal" || videosLimit === null) {
     status = `${planLabel} · unlimited`;
   } else {
     const remaining = Math.max(0, videosLimit - videosUsed);
